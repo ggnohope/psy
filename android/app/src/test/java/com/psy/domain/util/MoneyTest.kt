@@ -29,4 +29,10 @@ class MoneyTest {
     fun `formats negative amount with leading minus`() {
         assertEquals("-45.00 $", Money.formatMinor(amountMinor = -4500, fractionDigits = 2, suffix = "$"))
     }
+
+    @Test
+    fun `formats amount beyond Double precision exactly`() {
+        // 9_007_199_254_740_993 minor units = 2^53 + 1, which Double cannot represent exactly
+        assertEquals("90,071,992,547,409.93 $", Money.formatMinor(amountMinor = 9_007_199_254_740_993, fractionDigits = 2, suffix = "$"))
+    }
 }

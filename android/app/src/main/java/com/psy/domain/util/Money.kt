@@ -10,26 +10,30 @@ object Money {
 
     /**
      * Renders a minor-unit amount as a grouped decimal string with a currency suffix.
-     * Always shows exactly [fractionDigits] decimal places.
+     * Always shows exactly [fractionDigits] decimal places. Uses integer arithmetic
+     * throughout so precision is never lost (amounts are Long minor units).
      *
      * @param amountMinor amount in minor units (e.g. 1234 with fractionDigits=2 == 12.34)
      * @param fractionDigits decimal places for the currency (0 for VND, 2 for USD)
      * @param suffix currency symbol appended after a space (e.g. "đ", "$")
      */
     fun formatMinor(amountMinor: Long, fractionDigits: Int, suffix: String): String {
-        val divisor = Math.pow(10.0, fractionDigits.toDouble())
-        val value = abs(amountMinor) / divisor
+        var divisor = 1L
+        repeat(fractionDigits) { divisor *= 10L }
 
-        val symbols = DecimalFormatSymbols(Locale.US) // ',' grouping, '.' decimal
-        val pattern = buildString {
-            append("#,##0")
-            if (fractionDigits > 0) {
-                append('.')
-                repeat(fractionDigits) { append('0') }
-            }
-        }
-        val formatted = DecimalFormat(pattern, symbols).format(value)
+        val absAmount = abs(amountMinor)
+        val whole = absAmount / divisor
+        val frac = absAmount % divisor
+
+        val symbols = DecimalFormatSymbols(Locale.US) // ',' grouping
+        val groupedWhole = DecimalFormat("#,##0", symbols).format(whole)
         val sign = if (amountMinor < 0) "-" else ""
-        return "$sign$formatted $suffix"
+
+        return if (fractionDigits > 0) {
+            val fracStr = frac.toString().padStart(fractionDigits, '0')
+            "$sign$groupedWhole.$fracStr $suffix"
+        } else {
+            "$sign$groupedWhole $suffix"
+        }
     }
 }
