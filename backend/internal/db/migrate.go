@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"embed"
+	"fmt"
 	"sort"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -26,10 +27,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	for _, name := range names {
 		sqlBytes, err := migrationFS.ReadFile("migrations/" + name)
 		if err != nil {
-			return err
+			return fmt.Errorf("read migration %s: %w", name, err)
 		}
 		if _, err := pool.Exec(ctx, string(sqlBytes)); err != nil {
-			return err
+			return fmt.Errorf("migration %s: %w", name, err)
 		}
 	}
 	return nil
