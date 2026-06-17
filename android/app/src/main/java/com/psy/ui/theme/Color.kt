@@ -2,10 +2,14 @@ package com.psy.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Candy Pop palette
+val CandyViolet = Color(0xFFA18CFF)
+val CandySky = Color(0xFF7FD8FF)
+val CandyPink = Color(0xFFFF8FD6)
+val CandyPinkDeep = Color(0xFFFF5FA2)
+val CandyGreen = Color(0xFF22C55E)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val SurfaceLight = Color(0xFFF4F0FF)
+val OnSurfaceLight = Color(0xFF2B2640)
+val SurfaceDark = Color(0xFF1C1830)
+val OnSurfaceDark = Color(0xFFEDE9FF)

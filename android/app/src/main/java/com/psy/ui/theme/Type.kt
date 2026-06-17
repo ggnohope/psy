@@ -6,29 +6,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Set of Material typography styles to start with
-val Typography = Typography(
-    bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
-    )
-    /* Other default text styles to override
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
-    ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
-    )
-    */
+// Default to system FontFamily.Default for now; swap to a rounded font
+// (e.g. Quicksand / Baloo 2 in res/font) in the Theming & Lock plan.
+private val CandyFont = FontFamily.Default
+
+val CandyTypography = Typography(
+    headlineMedium = TextStyle(fontFamily = CandyFont, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp),
+    titleMedium = TextStyle(fontFamily = CandyFont, fontWeight = FontWeight.Bold, fontSize = 16.sp),
+    bodyMedium = TextStyle(fontFamily = CandyFont, fontWeight = FontWeight.Medium, fontSize = 14.sp),
+    labelSmall = TextStyle(fontFamily = CandyFont, fontWeight = FontWeight.SemiBold, fontSize = 11.sp),
 )
