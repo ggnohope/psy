@@ -1,0 +1,11 @@
+.superpowers/
+.DS_Store
+# Android
+*.iml
+.gradle/
+local.properties
+build/
+.idea/
+# Go
+/backend/bin/
+*.env
