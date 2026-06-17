@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("db connect: %v", err)
 	}
-	defer pool.Close()
+	defer pool.Close() // runs only if main returns normally; Fatalf paths skip this
 
 	if err := db.Migrate(ctx, pool); err != nil {
 		log.Fatalf("migrate: %v", err)
