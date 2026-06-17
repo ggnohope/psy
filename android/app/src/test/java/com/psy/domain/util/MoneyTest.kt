@@ -7,7 +7,7 @@ class MoneyTest {
 
     @Test
     fun `formats whole amount with grouping and suffix`() {
-        assertEquals("2,450,000 đ", Money.formatMinor(amountMinor = 245_000_000, fractionDigits = 2, suffix = "đ"))
+        assertEquals("2,450,000 đ", Money.formatMinor(amountMinor = 2_450_000, fractionDigits = 0, suffix = "đ"))
     }
 
     @Test
@@ -18,6 +18,11 @@ class MoneyTest {
     @Test
     fun `formats zero-fraction currency without decimals`() {
         assertEquals("7,000 đ", Money.formatMinor(amountMinor = 7_000, fractionDigits = 0, suffix = "đ"))
+    }
+
+    @Test
+    fun `formats fractional amount keeps trailing zeros`() {
+        assertEquals("2,450,000.00 $", Money.formatMinor(amountMinor = 245_000_000, fractionDigits = 2, suffix = "$"))
     }
 
     @Test
