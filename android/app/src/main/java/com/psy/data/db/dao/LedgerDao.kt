@@ -1,4 +1,4 @@
-package com.psy.data.db
+package com.psy.data.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert

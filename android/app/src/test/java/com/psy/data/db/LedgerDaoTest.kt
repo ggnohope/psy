@@ -2,6 +2,7 @@ package com.psy.data.db
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.psy.data.db.dao.LedgerDao
 import com.psy.data.db.entity.LedgerEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -28,15 +29,18 @@ class LedgerDaoTest {
     }
 
     @After
-    fun tearDown() = db.close()
+    fun tearDown() {
+        if (::db.isInitialized) db.close()
+    }
 
     @Test
     fun `insert then observe returns the ledger`() = runTest {
-        dao.insert(LedgerEntity(id = 1, name = "Personal", icon = "wallet", currency = "VND", createdAt = 1000L))
+        val inserted = LedgerEntity(id = 0, name = "Personal", icon = "wallet", currency = "VND", createdAt = 1000L)
+        dao.insert(inserted)
 
         val ledgers = dao.observeAll().first()
 
         assertEquals(1, ledgers.size)
-        assertEquals("Personal", ledgers[0].name)
+        assertEquals(inserted.copy(id = 1), ledgers[0])
     }
 }
