@@ -2,20 +2,33 @@ package com.psy.ui.app
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.psy.data.auth.AuthTokenStore
 import com.psy.data.settings.SettingsRepository
 import com.psy.data.settings.SettingsState
+import com.psy.domain.repository.BackupRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val AUTO_BACKUP_THROTTLE_MS = 5 * 60 * 1000L // 5 minutes
+
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
+    private val backupRepository: BackupRepository,
+    private val tokenStore: AuthTokenStore,
 ) : ViewModel() {
+
+    // Application-scoped coroutine scope for best-effort background ops (outlives ViewModel)
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val settings: StateFlow<SettingsState> = settingsRepo.settings.stateIn(
         scope = viewModelScope,
@@ -59,9 +72,21 @@ class AppViewModel @Inject constructor(
     /**
      * Called from LifecycleEventObserver on ON_STOP.
      * Records the time the app went to background for timeout calculation.
+     * Also triggers a best-effort auto-backup if conditions are met (signed in, auto-backup
+     * enabled, throttle ≥ 5 min since last sync). Non-blocking — runs on appScope.
      */
     fun onStop(nowMillis: Long) {
         lastBackgroundedAt = nowMillis
+        // Best-effort auto-backup: read state and trigger if eligible
+        appScope.launch {
+            val token = tokenStore.currentToken() ?: return@launch
+            val autoBackup = tokenStore.autoBackupFlow.first()
+            if (!autoBackup) return@launch
+            val lastSync = tokenStore.lastSyncAtFlow.first() ?: 0L
+            if (nowMillis - lastSync > AUTO_BACKUP_THROTTLE_MS) {
+                runCatching { backupRepository.backupNow() }
+            }
+        }
     }
 
     /** Clears the lock gate — called by LockScreen on successful auth. */
