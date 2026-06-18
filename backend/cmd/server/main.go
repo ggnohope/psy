@@ -24,7 +24,7 @@ func main() {
 		log.Fatalf("migrate: %v", err)
 	}
 
-	r := api.NewRouter()
+	r := api.NewRouter(cfg, pool)
 	log.Printf("listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, r); err != nil {
 		log.Fatalf("serve: %v", err)
