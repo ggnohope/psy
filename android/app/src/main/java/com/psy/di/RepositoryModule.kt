@@ -20,4 +20,5 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindBudgetRepo(impl: BudgetRepositoryImpl): BudgetRepository
     @Binds @Singleton abstract fun bindSettingsRepo(impl: SettingsRepositoryImpl): SettingsRepository
     @Binds @Singleton abstract fun bindAuthRepo(impl: AuthRepositoryImpl): AuthRepository
+    @Binds @Singleton abstract fun bindBackupRepo(impl: BackupRepositoryImpl): BackupRepository
 }

@@ -12,4 +12,14 @@ interface TransactionDao {
     /** Half-open range [start, end): callers pass end = start of the next period (e.g. first ms of next month). */
     @Query("SELECT * FROM transactions WHERE ledgerId = :ledgerId AND date >= :start AND date < :end ORDER BY date DESC, id DESC")
     fun observeBetween(ledgerId: Long, start: Long, end: Long): Flow<List<TransactionEntity>>
+
+    // ── Backup support ──────────────────────────────────────────────────────
+    @Query("SELECT * FROM transactions")
+    suspend fun getAll(): List<TransactionEntity>
+
+    @Query("DELETE FROM transactions")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<TransactionEntity>)
 }

@@ -20,4 +20,14 @@ interface LedgerDao {
 
     @Query("SELECT COUNT(*) FROM ledgers")
     suspend fun count(): Int
+
+    // ── Backup support ──────────────────────────────────────────────────────
+    @Query("SELECT * FROM ledgers")
+    suspend fun getAll(): List<LedgerEntity>
+
+    @Query("DELETE FROM ledgers")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<LedgerEntity>)
 }

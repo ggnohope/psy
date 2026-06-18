@@ -12,4 +12,14 @@ interface CategoryDao {
     @Query("SELECT * FROM categories ORDER BY sortOrder ASC") fun observeAll(): Flow<List<CategoryEntity>>
     @Query("SELECT COUNT(*) FROM categories") suspend fun count(): Int
     @Delete suspend fun delete(category: CategoryEntity)
+
+    // ── Backup support ──────────────────────────────────────────────────────
+    @Query("SELECT * FROM categories")
+    suspend fun getAll(): List<CategoryEntity>
+
+    @Query("DELETE FROM categories")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<CategoryEntity>)
 }
