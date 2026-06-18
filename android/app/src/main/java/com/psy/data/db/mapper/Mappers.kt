@@ -14,3 +14,6 @@ fun Ledger.toEntity() = LedgerEntity(id, name, icon, currency, createdAt)
 
 fun TransactionEntity.toDomain() = Transaction(id, ledgerId, TxType.valueOf(type), amountMinor, categoryId, accountId, toAccountId, note, date, createdAt, updatedAt, photoUri)
 fun Transaction.toEntity() = TransactionEntity(id, ledgerId, type.name, amountMinor, categoryId, accountId, toAccountId, note, date, createdAt, updatedAt, photoUri)
+
+fun BudgetEntity.toDomain() = Budget(id, ledgerId, categoryId, amountMinor)
+fun Budget.toEntity() = BudgetEntity(id, ledgerId, categoryId, amountMinor)
