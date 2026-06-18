@@ -47,7 +47,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.psy.R
 import kotlinx.coroutines.launch
@@ -259,19 +259,20 @@ private suspend fun launchGoogleSignIn(
     }
     try {
         val credentialManager = CredentialManager.create(activity)
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setServerClientId(clientId)
-            .setFilterByAuthorizedAccounts(false)
-            .build()
+        // Button-triggered "Sign in with Google" flow (more robust than GetGoogleIdOption,
+        // which is meant for the silent/bottom-sheet one-tap and fails for explicit buttons).
+        val signInOption = GetSignInWithGoogleOption.Builder(clientId).build()
         val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
+            .addCredentialOption(signInOption)
             .build()
         val result = credentialManager.getCredential(activity, request)
         val googleCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
         onSuccess(googleCredential.idToken)
     } catch (e: GetCredentialException) {
-        onError("Chưa cấu hình Google: ${e.message}")
+        android.util.Log.e("PsyGoogleSignIn", "GetCredentialException type=${e.type}", e)
+        onError("Google: ${e.type} — ${e.message}")
     } catch (e: Exception) {
-        onError("Lỗi đăng nhập Google: ${e.message}")
+        android.util.Log.e("PsyGoogleSignIn", "Sign-in error", e)
+        onError("Lỗi Google: ${e::class.simpleName} — ${e.message}")
     }
 }
