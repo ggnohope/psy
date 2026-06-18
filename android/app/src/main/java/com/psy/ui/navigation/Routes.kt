@@ -9,6 +9,8 @@ object Routes {
     const val ADD_EDIT_PATTERN = "addEdit?txId={txId}"
     const val ARG_TX_ID = "txId"
 
+    const val BUDGET = "budget"
+
     const val SETTINGS = "settings"
     const val MANAGE_CATEGORIES = "manageCategories"
     const val MANAGE_ACCOUNTS = "manageAccounts"

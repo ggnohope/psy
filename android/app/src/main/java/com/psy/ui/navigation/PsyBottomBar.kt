@@ -1,9 +1,10 @@
 package com.psy.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -19,8 +20,9 @@ private data class BottomNavItem(
 
 private val bottomNavItems = listOf(
     BottomNavItem(Routes.HOME, "Trang chủ", Icons.Default.Home),
-    BottomNavItem(Routes.STATS, "Thống kê", Icons.Default.Star),
+    BottomNavItem(Routes.STATS, "Thống kê", Icons.Default.BarChart),
     BottomNavItem(Routes.CALENDAR, "Lịch", Icons.Default.DateRange),
+    BottomNavItem(Routes.BUDGET, "Ngân sách", Icons.Default.Savings),
 )
 
 @Composable

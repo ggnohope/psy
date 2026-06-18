@@ -13,6 +13,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.psy.ui.addedit.AddEditTransactionScreen
+import com.psy.ui.budget.BudgetScreen
 import com.psy.ui.calendar.CalendarScreen
 import com.psy.ui.home.HomeScreen
 import com.psy.ui.manage.account.ManageAccountsScreen
@@ -20,7 +21,7 @@ import com.psy.ui.manage.category.ManageCategoriesScreen
 import com.psy.ui.settings.SettingsScreen
 import com.psy.ui.stats.StatsScreen
 
-private val bottomBarRoutes = setOf(Routes.HOME, Routes.STATS, Routes.CALENDAR)
+private val bottomBarRoutes = setOf(Routes.HOME, Routes.STATS, Routes.CALENDAR, Routes.BUDGET)
 
 @Composable
 fun PsyNavHost() {
@@ -62,6 +63,10 @@ fun PsyNavHost() {
 
             composable(Routes.CALENDAR) {
                 CalendarScreen()
+            }
+
+            composable(Routes.BUDGET) {
+                BudgetScreen()
             }
 
             composable(
