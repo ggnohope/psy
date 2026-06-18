@@ -1,5 +1,8 @@
 package com.psy.ui.addedit
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,11 +24,13 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,6 +40,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -52,12 +58,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.psy.domain.model.Account
 import com.psy.domain.model.Category
 import com.psy.domain.model.TxType
@@ -86,6 +94,13 @@ fun AddEditTransactionScreen(
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
+
+    // Photo picker launcher — no runtime permission needed with the Photo Picker API
+    val photoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) viewModel.onPickPhoto(uri)
+    }
 
     Scaffold(
         topBar = {
@@ -219,7 +234,22 @@ fun AddEditTransactionScreen(
             )
 
             // ----------------------------------------------------------------
-            // 7. Save button
+            // 7. Photo attachment
+            // ----------------------------------------------------------------
+            PhotoSection(
+                photoUri = uiState.photoUri,
+                errorMessage = uiState.photoErrorMessage,
+                onAttachClick = {
+                    photoLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                    )
+                },
+                onRemoveClick = viewModel::onRemovePhoto,
+                onErrorDismiss = viewModel::clearPhotoError,
+            )
+
+            // ----------------------------------------------------------------
+            // 8. Save button
             // ----------------------------------------------------------------
             Button(
                 onClick = { viewModel.save(System.currentTimeMillis()) },
@@ -498,6 +528,91 @@ private fun AccountChip(
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) CandyGreen else MaterialTheme.colorScheme.onSurface,
         )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Photo section
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun PhotoSection(
+    photoUri: String?,
+    errorMessage: String?,
+    onAttachClick: () -> Unit,
+    onRemoveClick: () -> Unit,
+    onErrorDismiss: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Đính kèm ảnh",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+        )
+
+        if (photoUri != null) {
+            // Show thumbnail with a remove (×) overlay
+            Box(modifier = Modifier.size(96.dp)) {
+                AsyncImage(
+                    model = photoUri,
+                    contentDescription = "Ảnh đính kèm",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                )
+                // Remove button in top-right corner
+                IconButton(
+                    onClick = onRemoveClick,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f)),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Xoá ảnh",
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+        } else {
+            OutlinedButton(
+                onClick = onAttachClick,
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text(text = "📷  Đính kèm ảnh")
+            }
+        }
+
+        // Transient error banner
+        if (errorMessage != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CandyPinkDeep.copy(alpha = 0.1f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CandyPinkDeep,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onErrorDismiss, modifier = Modifier.size(20.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Đóng",
+                        tint = CandyPinkDeep,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+        }
     }
 }
 

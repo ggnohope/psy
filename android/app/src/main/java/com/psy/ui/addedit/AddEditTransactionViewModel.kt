@@ -1,8 +1,10 @@
 package com.psy.ui.addedit
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.psy.data.photo.PhotoStorage
 import com.psy.domain.model.Account
 import com.psy.domain.model.Category
 import com.psy.domain.model.CategoryType
@@ -55,6 +57,10 @@ data class AddEditUiState(
     val note: String = "",
     val currency: Currency = Currency.VND,
     val canSave: Boolean = false,
+    /** Absolute path of the attached photo stored in internal storage; null if none. */
+    val photoUri: String? = null,
+    /** Transient one-liner error message; null when no error pending. */
+    val photoErrorMessage: String? = null,
 )
 
 // ---------------------------------------------------------------------------
@@ -67,6 +73,7 @@ class AddEditTransactionViewModel @Inject constructor(
     private val categoryRepo: CategoryRepository,
     private val accountRepo: AccountRepository,
     private val ledgerRepo: LedgerRepository,
+    private val photoStorage: PhotoStorage,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -105,6 +112,7 @@ class AddEditTransactionViewModel @Inject constructor(
             var prefillToAccountId: Long? = null
             var prefillDate = todayEpochMillis()
             var prefillNote = ""
+            var prefillPhotoUri: String? = null
 
             if (isEdit) {
                 val tx = txRepo.getById(txId)
@@ -125,6 +133,7 @@ class AddEditTransactionViewModel @Inject constructor(
                     }
                     prefillDate = tx.date
                     prefillNote = tx.note
+                    prefillPhotoUri = tx.photoUri
                     originalCreatedAt = tx.createdAt
                 }
             } else {
@@ -160,6 +169,7 @@ class AddEditTransactionViewModel @Inject constructor(
                     note = prefillNote,
                     currency = currency,
                     canSave = canSave,
+                    photoUri = prefillPhotoUri,
                 )
             }
         }
@@ -283,6 +293,41 @@ class AddEditTransactionViewModel @Inject constructor(
     }
 
     // ---------------------------------------------------------------------------
+    // Photo attachment
+    // ---------------------------------------------------------------------------
+
+    fun onPickPhoto(uri: Uri) {
+        viewModelScope.launch {
+            // Clear any previous error
+            _uiState.update { it.copy(photoErrorMessage = null) }
+            val name = "img_${System.currentTimeMillis()}"
+            try {
+                val path = photoStorage.savePicked(uri, name)
+                _uiState.update { it.copy(photoUri = path) }
+            } catch (e: Exception) {
+                // Non-blocking: leave photoUri unchanged, surface a transient error
+                _uiState.update {
+                    it.copy(photoErrorMessage = "Không thể đính kèm ảnh: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun onRemovePhoto() {
+        val oldPath = _uiState.value.photoUri
+        _uiState.update { it.copy(photoUri = null, photoErrorMessage = null) }
+        if (oldPath != null) {
+            viewModelScope.launch {
+                photoStorage.delete(oldPath)
+            }
+        }
+    }
+
+    fun clearPhotoError() {
+        _uiState.update { it.copy(photoErrorMessage = null) }
+    }
+
+    // ---------------------------------------------------------------------------
     // Save / Delete
     // ---------------------------------------------------------------------------
 
@@ -308,6 +353,7 @@ class AddEditTransactionViewModel @Inject constructor(
                     date = state.date,
                     createdAt = if (isEdit) originalCreatedAt else now,
                     updatedAt = now,
+                    photoUri = state.photoUri,
                 )
             } else {
                 Transaction(
@@ -322,6 +368,7 @@ class AddEditTransactionViewModel @Inject constructor(
                     date = state.date,
                     createdAt = if (isEdit) originalCreatedAt else now,
                     updatedAt = now,
+                    photoUri = state.photoUri,
                 )
             }
             txRepo.upsert(tx)

@@ -35,6 +35,8 @@ data class TxRow(
     val type: TxType,
     val amountMinor: Long,
     val note: String,
+    /** Absolute path of the attached photo stored in internal storage; null if none. */
+    val photoUri: String? = null,
 )
 
 data class DayGroup(
@@ -138,6 +140,7 @@ class HomeViewModel @Inject constructor(
                                 type = tx.type,
                                 amountMinor = tx.amountMinor,
                                 note = tx.note,
+                                photoUri = tx.photoUri,
                             )
                         } else {
                             TxRow(
@@ -149,6 +152,7 @@ class HomeViewModel @Inject constructor(
                                 type = tx.type,
                                 amountMinor = tx.amountMinor,
                                 note = tx.note,
+                                photoUri = tx.photoUri,
                             )
                         }
                     }
