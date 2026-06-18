@@ -211,6 +211,7 @@ class AddEditTransactionViewModel @Inject constructor(
         val state = _uiState.value
         if (!state.canSave) return
         viewModelScope.launch {
+            _uiState.update { it.copy(canSave = false) }
             val typed = state.amountText.toLongOrNull() ?: 0L
             val divisor = pow10(state.currency.fractionDigits)
             val amountMinor = typed * divisor

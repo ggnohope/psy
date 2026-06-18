@@ -56,7 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.psy.domain.model.Account
 import com.psy.domain.model.Category
@@ -354,7 +354,7 @@ private fun CategorySection(
             // Fixed height: 2 rows × (chip height ~72dp) + spacing.
             // Use wrapContentHeight() isn't reliable inside scroll, so we
             // let the grid be non-scrollable at a fixed height.
-            modifier = Modifier.height(((categories.size / 4 + 1) * 80).dp),
+            modifier = Modifier.height((((categories.size + 3) / 4) * 80).dp),
             userScrollEnabled = false,
         ) {
             items(categories, key = { it.id }) { category ->
