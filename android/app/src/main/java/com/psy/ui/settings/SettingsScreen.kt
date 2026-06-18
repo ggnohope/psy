@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +24,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onManageCategories: () -> Unit,
     onManageAccounts: () -> Unit,
+    onAppearance: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -43,6 +45,24 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = paddingValues,
         ) {
+            item {
+                ListItem(
+                    headlineContent = { Text("Giao diện") },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = null,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                        )
+                    },
+                    modifier = Modifier.clickable(onClick = onAppearance),
+                )
+            }
             item {
                 ListItem(
                     headlineContent = { Text("Quản lý danh mục") },

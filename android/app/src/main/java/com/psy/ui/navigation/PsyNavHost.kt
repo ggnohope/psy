@@ -18,6 +18,7 @@ import com.psy.ui.calendar.CalendarScreen
 import com.psy.ui.home.HomeScreen
 import com.psy.ui.manage.account.ManageAccountsScreen
 import com.psy.ui.manage.category.ManageCategoriesScreen
+import com.psy.ui.settings.AppearanceScreen
 import com.psy.ui.settings.SettingsScreen
 import com.psy.ui.stats.StatsScreen
 
@@ -87,7 +88,12 @@ fun PsyNavHost() {
                     onBack = { navController.popBackStack() },
                     onManageCategories = { navController.navigate(Routes.MANAGE_CATEGORIES) },
                     onManageAccounts = { navController.navigate(Routes.MANAGE_ACCOUNTS) },
+                    onAppearance = { navController.navigate(Routes.APPEARANCE) },
                 )
+            }
+
+            composable(Routes.APPEARANCE) {
+                AppearanceScreen(onBack = { navController.popBackStack() })
             }
 
             composable(Routes.MANAGE_CATEGORIES) {

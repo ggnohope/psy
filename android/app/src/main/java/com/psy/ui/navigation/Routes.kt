@@ -14,6 +14,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val MANAGE_CATEGORIES = "manageCategories"
     const val MANAGE_ACCOUNTS = "manageAccounts"
+    const val APPEARANCE = "appearance"
 
     /** Builds a navigation route to the add/edit screen.
      *  txId = null → new transaction (-1L), otherwise edit. */
