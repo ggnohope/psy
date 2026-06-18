@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -25,6 +26,7 @@ fun SettingsScreen(
     onManageCategories: () -> Unit,
     onManageAccounts: () -> Unit,
     onAppearance: () -> Unit = {},
+    onLockSettings: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -61,6 +63,24 @@ fun SettingsScreen(
                         )
                     },
                     modifier = Modifier.clickable(onClick = onAppearance),
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text("Khoá ứng dụng") },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                        )
+                    },
+                    modifier = Modifier.clickable(onClick = onLockSettings),
                 )
             }
             item {
