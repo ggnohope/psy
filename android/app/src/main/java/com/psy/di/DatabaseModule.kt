@@ -22,6 +22,8 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PsyDatabase =
         Room.databaseBuilder(context, PsyDatabase::class.java, "psy.db")
+            // DEV-ONLY: no real data yet, so wipe & rebuild on schema bumps.
+            // TODO: replace with proper Migration objects before any real release (would destroy user data).
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
