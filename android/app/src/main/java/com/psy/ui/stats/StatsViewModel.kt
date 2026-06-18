@@ -131,12 +131,21 @@ class StatsViewModel @Inject constructor(
                         .groupBy { it.categoryId!! }
                         .mapValues { (_, txList) -> txList.sumOf { it.amountMinor } }
 
+                    // Pie slices get distinct colors from a fixed palette by index, so the
+                    // chart is always readable even when categories share the same color.
+                    val piePalette = listOf(
+                        0xFFA18CFFL, 0xFF7FD8FFL, 0xFFFF8FD6L, 0xFFFF5FA2L, 0xFF22C55EL,
+                        0xFFFFB86BL, 0xFF6BCB77L, 0xFF4D96FFL, 0xFFFF6B6BL, 0xFFB088F9L,
+                    )
                     val slices = pieByCategory
                         .mapNotNull { (catId, amount) ->
                             val cat = categoryMap[catId] ?: return@mapNotNull null
-                            PieSlice(cat.name, amount, cat.color)
+                            cat.name to amount
                         }
-                        .sortedByDescending { it.amountMinor }
+                        .sortedByDescending { it.second }
+                        .mapIndexed { index, (name, amount) ->
+                            PieSlice(name, amount, piePalette[index % piePalette.size])
+                        }
 
                     // ── Top entries ───────────────────────────────────────────
                     val pieTotal = slices.sumOf { it.amountMinor }
