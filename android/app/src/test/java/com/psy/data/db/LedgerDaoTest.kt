@@ -36,7 +36,7 @@ class LedgerDaoTest {
     @Test
     fun `insert then observe returns the ledger`() = runTest {
         val inserted = LedgerEntity(id = 0, name = "Personal", icon = "wallet", currency = "VND", createdAt = 1000L)
-        dao.insert(inserted)
+        dao.upsert(inserted)
 
         val ledgers = dao.observeAll().first()
 
