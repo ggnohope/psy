@@ -11,4 +11,5 @@ interface CategoryDao {
     fun observeByType(type: String): Flow<List<CategoryEntity>>
     @Query("SELECT * FROM categories ORDER BY sortOrder ASC") fun observeAll(): Flow<List<CategoryEntity>>
     @Query("SELECT COUNT(*) FROM categories") suspend fun count(): Int
+    @Delete suspend fun delete(category: CategoryEntity)
 }

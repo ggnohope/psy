@@ -221,7 +221,7 @@ class AddEditTransactionViewModel @Inject constructor(
                 ledgerId = activeLedgerId,
                 type = state.type,
                 amountMinor = amountMinor,
-                categoryId = state.selectedCategoryId!!,
+                categoryId = state.selectedCategoryId,
                 accountId = state.selectedAccountId!!,
                 note = state.note,
                 date = state.date,
@@ -271,4 +271,5 @@ class AddEditTransactionViewModel @Inject constructor(
 private fun TxType.toCategoryType(): CategoryType = when (this) {
     TxType.INCOME -> CategoryType.INCOME
     TxType.EXPENSE -> CategoryType.EXPENSE
+    TxType.TRANSFER -> CategoryType.EXPENSE // fallback; Transfer UI (Task 5) will handle this
 }

@@ -18,4 +18,5 @@ class CategoryRepositoryImpl @Inject constructor(
         dao.observeByType(type.name).map { list -> list.map { it.toDomain() } }
     override suspend fun count(): Int = dao.count()
     override suspend fun upsert(category: Category): Long = dao.upsert(category.toEntity())
+    override suspend fun delete(category: Category) = dao.delete(category.toEntity())
 }

@@ -9,4 +9,5 @@ interface CategoryRepository {
     fun observeByType(type: CategoryType): Flow<List<Category>>
     suspend fun count(): Int
     suspend fun upsert(category: Category): Long
+    suspend fun delete(category: Category)
 }

@@ -225,6 +225,7 @@ private fun TxRowCard(
                         when (row.type) {
                             TxType.EXPENSE -> CandyPinkDeep.copy(alpha = 0.15f)
                             TxType.INCOME -> CandyGreen.copy(alpha = 0.15f)
+                            TxType.TRANSFER -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                         },
                     ),
                 contentAlignment = Alignment.Center,
@@ -264,6 +265,7 @@ private fun TxRowCard(
             val (sign, amountColor) = when (row.type) {
                 TxType.EXPENSE -> "-" to CandyPinkDeep
                 TxType.INCOME -> "+" to CandyGreen
+                TxType.TRANSFER -> "" to MaterialTheme.colorScheme.onSurface
             }
             Text(
                 text = "$sign${Money.formatMinor(row.amountMinor, fractionDigits, symbol)}",

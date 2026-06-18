@@ -280,6 +280,7 @@ private fun SegmentedTypeToggle(
                     text = when (type) {
                         TxType.EXPENSE -> "Chi tiêu"
                         TxType.INCOME -> "Thu nhập"
+                        TxType.TRANSFER -> "Chuyển khoản"
                     },
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                     color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,

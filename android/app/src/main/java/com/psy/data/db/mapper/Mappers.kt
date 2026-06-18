@@ -12,5 +12,5 @@ fun Category.toEntity() = CategoryEntity(id, name, icon, color, type.name, sortO
 fun LedgerEntity.toDomain() = Ledger(id, name, icon, currency, createdAt)
 fun Ledger.toEntity() = LedgerEntity(id, name, icon, currency, createdAt)
 
-fun TransactionEntity.toDomain() = Transaction(id, ledgerId, TxType.valueOf(type), amountMinor, categoryId, accountId, note, date, createdAt, updatedAt)
-fun Transaction.toEntity() = TransactionEntity(id, ledgerId, type.name, amountMinor, categoryId, accountId, note, date, createdAt, updatedAt)
+fun TransactionEntity.toDomain() = Transaction(id, ledgerId, TxType.valueOf(type), amountMinor, categoryId, accountId, toAccountId, note, date, createdAt, updatedAt, photoUri)
+fun Transaction.toEntity() = TransactionEntity(id, ledgerId, type.name, amountMinor, categoryId, accountId, toAccountId, note, date, createdAt, updatedAt, photoUri)

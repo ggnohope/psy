@@ -123,7 +123,7 @@ class HomeViewModel @Inject constructor(
                     }
 
                     val rows = txList.map { tx ->
-                        val cat = categoryMap[tx.categoryId]
+                        val cat = tx.categoryId?.let { categoryMap[it] }
                         val acc = accountMap[tx.accountId]
                         TxRow(
                             id = tx.id,
@@ -144,6 +144,7 @@ class HomeViewModel @Inject constructor(
                     when (tx.type) {
                         TxType.INCOME -> incomeMinor += tx.amountMinor
                         TxType.EXPENSE -> expenseMinor += tx.amountMinor
+                        TxType.TRANSFER -> Unit // excluded from income/expense sums
                     }
                 }
 

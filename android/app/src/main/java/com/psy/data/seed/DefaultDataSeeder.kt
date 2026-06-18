@@ -14,7 +14,8 @@ class DefaultDataSeeder @Inject constructor(
             ledgerRepo.upsert(Ledger(name = "Sổ của tôi", icon = "wallet", currency = "VND", createdAt = now))
         }
         if (accountRepo.count() == 0) {
-            accountRepo.upsert(Account(name = "Tiền mặt", type = AccountType.CASH, icon = "cash", color = 0xFF22C55E))
+            accountRepo.upsert(Account(name = "Tiền mặt", type = AccountType.CASH, icon = "💵", color = 0xFF22C55E))
+            accountRepo.upsert(Account(name = "Ngân hàng", type = AccountType.BANK, icon = "🏦", color = 0xFF7FD8FF))
         }
         if (categoryRepo.count() == 0) {
             val expense = listOf("Ăn uống" to "🍜", "Di chuyển" to "🚌", "Mua sắm" to "🛍️", "Hoá đơn" to "🧾", "Giải trí" to "🎮", "Sức khoẻ" to "💊", "Khác" to "📦")
