@@ -8,6 +8,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.psy.ui.addedit.AddEditTransactionScreen
 import com.psy.ui.home.HomeScreen
+import com.psy.ui.manage.account.ManageAccountsScreen
+import com.psy.ui.manage.category.ManageCategoriesScreen
+import com.psy.ui.settings.SettingsScreen
 
 @Composable
 fun PsyNavHost() {
@@ -21,6 +24,7 @@ fun PsyNavHost() {
             HomeScreen(
                 onAddClick = { navController.navigate(Routes.addEdit()) },
                 onTxClick = { id -> navController.navigate(Routes.addEdit(id)) },
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) },
             )
         }
 
@@ -35,6 +39,22 @@ fun PsyNavHost() {
         ) {
             // ViewModel reads txId from SavedStateHandle automatically via Hilt.
             AddEditTransactionScreen(onDone = { navController.popBackStack() })
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onManageCategories = { navController.navigate(Routes.MANAGE_CATEGORIES) },
+                onManageAccounts = { navController.navigate(Routes.MANAGE_ACCOUNTS) },
+            )
+        }
+
+        composable(Routes.MANAGE_CATEGORIES) {
+            ManageCategoriesScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.MANAGE_ACCOUNTS) {
+            ManageAccountsScreen(onBack = { navController.popBackStack() })
         }
     }
 }
