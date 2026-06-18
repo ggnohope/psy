@@ -257,14 +257,23 @@ private fun TxRowCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Category + note + account
+            // Category + note + account (or "from → to" for TRANSFER)
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = row.categoryName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                if (row.type == TxType.TRANSFER) {
+                    Text(
+                        text = "${row.accountName} → ${row.toAccountName ?: "—"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                } else {
+                    Text(
+                        text = row.categoryName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
                 if (row.note.isNotBlank()) {
                     Text(
                         text = row.note,
@@ -273,11 +282,13 @@ private fun TxRowCard(
                         maxLines = 1,
                     )
                 }
-                Text(
-                    text = row.accountName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                )
+                if (row.type != TxType.TRANSFER) {
+                    Text(
+                        text = row.accountName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                    )
+                }
             }
 
             // Trailing amount with sign + color

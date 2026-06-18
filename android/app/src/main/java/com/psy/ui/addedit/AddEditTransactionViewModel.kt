@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -50,6 +49,8 @@ data class AddEditUiState(
     val accounts: List<Account> = emptyList(),
     val selectedCategoryId: Long? = null,
     val selectedAccountId: Long? = null,
+    /** Destination account for TRANSFER type; null for INCOME/EXPENSE. */
+    val toAccountId: Long? = null,
     val date: Long = 0L,
     val note: String = "",
     val currency: Currency = Currency.VND,
@@ -101,6 +102,7 @@ class AddEditTransactionViewModel @Inject constructor(
             var prefillAmountText = ""
             var prefillCategoryId: Long? = null
             var prefillAccountId = defaultAccountId
+            var prefillToAccountId: Long? = null
             var prefillDate = todayEpochMillis()
             var prefillNote = ""
 
@@ -111,8 +113,16 @@ class AddEditTransactionViewModel @Inject constructor(
                     // Reverse the amount: amountMinor / 10^fractionDigits → whole units (Long string).
                     val divisor = pow10(currency.fractionDigits)
                     prefillAmountText = if (divisor > 0L) (tx.amountMinor / divisor).toString() else "0"
-                    prefillCategoryId = tx.categoryId
-                    prefillAccountId = tx.accountId
+                    if (tx.type == TxType.TRANSFER) {
+                        // TRANSFER: category is null; prefill both from/to accounts.
+                        prefillCategoryId = null
+                        prefillAccountId = tx.accountId
+                        prefillToAccountId = tx.toAccountId
+                    } else {
+                        prefillCategoryId = tx.categoryId
+                        prefillAccountId = tx.accountId
+                        prefillToAccountId = null
+                    }
                     prefillDate = tx.date
                     prefillNote = tx.note
                     originalCreatedAt = tx.createdAt
@@ -121,11 +131,20 @@ class AddEditTransactionViewModel @Inject constructor(
                 prefillDate = todayEpochMillis()
             }
 
-            // 4. Load initial categories for the chosen type.
-            val categories = categoryRepo.observeByType(initialType.toCategoryType()).first()
+            // 4. Load initial categories for the chosen type (empty list for TRANSFER).
+            val categories = if (initialType == TxType.TRANSFER) {
+                emptyList()
+            } else {
+                categoryRepo.observeByType(initialType.toCategoryType()).first()
+            }
 
-            val parsedAmount = prefillAmountText.toLongOrNull() ?: 0L
-            val canSave = parsedAmount > 0 && prefillCategoryId != null && prefillAccountId != null
+            val canSave = computeCanSave(
+                amountText = prefillAmountText,
+                type = initialType,
+                categoryId = prefillCategoryId,
+                accountId = prefillAccountId,
+                toAccountId = prefillToAccountId,
+            )
 
             _uiState.update {
                 AddEditUiState(
@@ -136,6 +155,7 @@ class AddEditTransactionViewModel @Inject constructor(
                     accounts = accounts,
                     selectedCategoryId = prefillCategoryId,
                     selectedAccountId = prefillAccountId,
+                    toAccountId = prefillToAccountId,
                     date = prefillDate,
                     note = prefillNote,
                     currency = currency,
@@ -151,17 +171,43 @@ class AddEditTransactionViewModel @Inject constructor(
 
     fun onTypeChange(newType: TxType) {
         viewModelScope.launch {
-            val categories = categoryRepo.observeByType(newType.toCategoryType()).first()
-            val currentCategoryId = _uiState.value.selectedCategoryId
-            // Clear selection if it doesn't exist in the new type's category list.
-            val newCategoryId = if (categories.any { it.id == currentCategoryId }) currentCategoryId else null
-            _uiState.update { state ->
-                state.copy(
-                    type = newType,
-                    categories = categories,
-                    selectedCategoryId = newCategoryId,
-                    canSave = computeCanSave(state.amountText, newCategoryId, state.selectedAccountId),
-                )
+            if (newType == TxType.TRANSFER) {
+                // TRANSFER: clear category; keep accounts; no categories needed.
+                _uiState.update { state ->
+                    state.copy(
+                        type = TxType.TRANSFER,
+                        categories = emptyList(),
+                        selectedCategoryId = null,
+                        // toAccountId stays null until user picks; from account keeps default.
+                        canSave = computeCanSave(
+                            amountText = state.amountText,
+                            type = TxType.TRANSFER,
+                            categoryId = null,
+                            accountId = state.selectedAccountId,
+                            toAccountId = state.toAccountId,
+                        ),
+                    )
+                }
+            } else {
+                // INCOME or EXPENSE: reload categories, clear toAccountId.
+                val categories = categoryRepo.observeByType(newType.toCategoryType()).first()
+                val currentCategoryId = _uiState.value.selectedCategoryId
+                val newCategoryId = if (categories.any { it.id == currentCategoryId }) currentCategoryId else null
+                _uiState.update { state ->
+                    state.copy(
+                        type = newType,
+                        categories = categories,
+                        selectedCategoryId = newCategoryId,
+                        toAccountId = null,
+                        canSave = computeCanSave(
+                            amountText = state.amountText,
+                            type = newType,
+                            categoryId = newCategoryId,
+                            accountId = state.selectedAccountId,
+                            toAccountId = null,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -172,7 +218,13 @@ class AddEditTransactionViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 amountText = digits,
-                canSave = computeCanSave(digits, state.selectedCategoryId, state.selectedAccountId),
+                canSave = computeCanSave(
+                    amountText = digits,
+                    type = state.type,
+                    categoryId = state.selectedCategoryId,
+                    accountId = state.selectedAccountId,
+                    toAccountId = state.toAccountId,
+                ),
             )
         }
     }
@@ -181,7 +233,13 @@ class AddEditTransactionViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 selectedCategoryId = id,
-                canSave = computeCanSave(state.amountText, id, state.selectedAccountId),
+                canSave = computeCanSave(
+                    amountText = state.amountText,
+                    type = state.type,
+                    categoryId = id,
+                    accountId = state.selectedAccountId,
+                    toAccountId = state.toAccountId,
+                ),
             )
         }
     }
@@ -190,7 +248,28 @@ class AddEditTransactionViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 selectedAccountId = id,
-                canSave = computeCanSave(state.amountText, state.selectedCategoryId, id),
+                canSave = computeCanSave(
+                    amountText = state.amountText,
+                    type = state.type,
+                    categoryId = state.selectedCategoryId,
+                    accountId = id,
+                    toAccountId = state.toAccountId,
+                ),
+            )
+        }
+    }
+
+    fun onToAccountChange(id: Long) {
+        _uiState.update { state ->
+            state.copy(
+                toAccountId = id,
+                canSave = computeCanSave(
+                    amountText = state.amountText,
+                    type = state.type,
+                    categoryId = state.selectedCategoryId,
+                    accountId = state.selectedAccountId,
+                    toAccountId = id,
+                ),
             )
         }
     }
@@ -216,18 +295,35 @@ class AddEditTransactionViewModel @Inject constructor(
             val divisor = pow10(state.currency.fractionDigits)
             val amountMinor = typed * divisor
 
-            val tx = Transaction(
-                id = if (isEdit) txId else 0L,
-                ledgerId = activeLedgerId,
-                type = state.type,
-                amountMinor = amountMinor,
-                categoryId = state.selectedCategoryId,
-                accountId = state.selectedAccountId!!,
-                note = state.note,
-                date = state.date,
-                createdAt = if (isEdit) originalCreatedAt else now,
-                updatedAt = now,
-            )
+            val tx = if (state.type == TxType.TRANSFER) {
+                Transaction(
+                    id = if (isEdit) txId else 0L,
+                    ledgerId = activeLedgerId,
+                    type = TxType.TRANSFER,
+                    amountMinor = amountMinor,
+                    categoryId = null,
+                    accountId = state.selectedAccountId!!,
+                    toAccountId = state.toAccountId,
+                    note = state.note,
+                    date = state.date,
+                    createdAt = if (isEdit) originalCreatedAt else now,
+                    updatedAt = now,
+                )
+            } else {
+                Transaction(
+                    id = if (isEdit) txId else 0L,
+                    ledgerId = activeLedgerId,
+                    type = state.type,
+                    amountMinor = amountMinor,
+                    categoryId = state.selectedCategoryId,
+                    accountId = state.selectedAccountId!!,
+                    toAccountId = null,
+                    note = state.note,
+                    date = state.date,
+                    createdAt = if (isEdit) originalCreatedAt else now,
+                    updatedAt = now,
+                )
+            }
             txRepo.upsert(tx)
             _doneChannel.send(Unit)
         }
@@ -248,11 +344,17 @@ class AddEditTransactionViewModel @Inject constructor(
 
     private fun computeCanSave(
         amountText: String,
+        type: TxType,
         categoryId: Long?,
         accountId: Long?,
+        toAccountId: Long?,
     ): Boolean {
         val amount = amountText.toLongOrNull() ?: 0L
-        return amount > 0L && categoryId != null && accountId != null
+        if (amount <= 0L) return false
+        return when (type) {
+            TxType.INCOME, TxType.EXPENSE -> categoryId != null && accountId != null
+            TxType.TRANSFER -> accountId != null && toAccountId != null && accountId != toAccountId
+        }
     }
 
     private fun pow10(n: Int): Long {

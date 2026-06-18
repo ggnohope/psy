@@ -30,6 +30,8 @@ data class TxRow(
     val categoryName: String,
     val categoryIcon: String,
     val accountName: String,
+    /** Destination account name for TRANSFER rows; null for INCOME/EXPENSE. */
+    val toAccountName: String? = null,
     val type: TxType,
     val amountMinor: Long,
     val note: String,
@@ -125,15 +127,30 @@ class HomeViewModel @Inject constructor(
                     val rows = txList.map { tx ->
                         val cat = tx.categoryId?.let { categoryMap[it] }
                         val acc = accountMap[tx.accountId]
-                        TxRow(
-                            id = tx.id,
-                            categoryName = cat?.name ?: "—",
-                            categoryIcon = cat?.icon ?: "📦",
-                            accountName = acc?.name ?: "—",
-                            type = tx.type,
-                            amountMinor = tx.amountMinor,
-                            note = tx.note,
-                        )
+                        if (tx.type == TxType.TRANSFER) {
+                            val toAcc = tx.toAccountId?.let { accountMap[it] }
+                            TxRow(
+                                id = tx.id,
+                                categoryName = acc?.name ?: "—",
+                                categoryIcon = "🔄",
+                                accountName = acc?.name ?: "—",
+                                toAccountName = toAcc?.name ?: "—",
+                                type = tx.type,
+                                amountMinor = tx.amountMinor,
+                                note = tx.note,
+                            )
+                        } else {
+                            TxRow(
+                                id = tx.id,
+                                categoryName = cat?.name ?: "—",
+                                categoryIcon = cat?.icon ?: "📦",
+                                accountName = acc?.name ?: "—",
+                                toAccountName = null,
+                                type = tx.type,
+                                amountMinor = tx.amountMinor,
+                                note = tx.note,
+                            )
+                        }
                     }
 
                     DayGroup(dateLabel = label, items = rows)

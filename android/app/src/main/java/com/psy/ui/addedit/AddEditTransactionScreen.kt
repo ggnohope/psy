@@ -147,9 +147,9 @@ fun AddEditTransactionScreen(
             )
 
             // ----------------------------------------------------------------
-            // 3. Category grid
+            // 3. Category grid (hidden for TRANSFER)
             // ----------------------------------------------------------------
-            if (uiState.categories.isNotEmpty()) {
+            if (uiState.type != TxType.TRANSFER && uiState.categories.isNotEmpty()) {
                 CategorySection(
                     categories = uiState.categories,
                     selectedId = uiState.selectedCategoryId,
@@ -158,14 +158,44 @@ fun AddEditTransactionScreen(
             }
 
             // ----------------------------------------------------------------
-            // 4. Account chips
+            // 4. Account chips — for TRANSFER: two selectors; otherwise single
             // ----------------------------------------------------------------
             if (uiState.accounts.isNotEmpty()) {
-                AccountSection(
-                    accounts = uiState.accounts,
-                    selectedId = uiState.selectedAccountId,
-                    onSelect = viewModel::selectAccount,
-                )
+                if (uiState.type == TxType.TRANSFER) {
+                    // "Từ tài khoản" (from)
+                    AccountSection(
+                        label = "Từ tài khoản",
+                        accounts = uiState.accounts,
+                        selectedId = uiState.selectedAccountId,
+                        onSelect = viewModel::selectAccount,
+                    )
+                    // "Đến tài khoản" (to)
+                    AccountSection(
+                        label = "Đến tài khoản",
+                        accounts = uiState.accounts,
+                        selectedId = uiState.toAccountId,
+                        onSelect = viewModel::onToAccountChange,
+                    )
+                    // Warn when from == to
+                    val fromEqTo = uiState.selectedAccountId != null &&
+                        uiState.toAccountId != null &&
+                        uiState.selectedAccountId == uiState.toAccountId
+                    if (fromEqTo) {
+                        Text(
+                            text = "Hai tài khoản phải khác nhau",
+                            color = CandyPinkDeep,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                        )
+                    }
+                } else {
+                    AccountSection(
+                        label = "Tài khoản",
+                        accounts = uiState.accounts,
+                        selectedId = uiState.selectedAccountId,
+                        onSelect = viewModel::selectAccount,
+                    )
+                }
             }
 
             // ----------------------------------------------------------------
@@ -414,10 +444,11 @@ private fun AccountSection(
     accounts: List<Account>,
     selectedId: Long?,
     onSelect: (Long) -> Unit,
+    label: String = "Tài khoản",
 ) {
     Column {
         Text(
-            text = "Tài khoản",
+            text = label,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(bottom = 8.dp),
