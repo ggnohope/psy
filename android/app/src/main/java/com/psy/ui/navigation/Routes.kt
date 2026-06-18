@@ -2,6 +2,8 @@ package com.psy.ui.navigation
 
 object Routes {
     const val HOME = "home"
+    const val STATS = "stats"
+    const val CALENDAR = "calendar"
 
     // Route pattern for NavHost (Task 6 uses this)
     const val ADD_EDIT_PATTERN = "addEdit?txId={txId}"
