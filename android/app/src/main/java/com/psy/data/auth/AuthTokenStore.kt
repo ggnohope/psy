@@ -2,16 +2,13 @@ package com.psy.data.auth
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,13 +21,11 @@ class AuthTokenStore @Inject constructor(
         private val AUTH_TOKEN = stringPreferencesKey("auth_token")
         private val USER_EMAIL = stringPreferencesKey("user_email")
         private val LAST_SYNC_AT = longPreferencesKey("last_sync_at")
-        private val AUTO_BACKUP = booleanPreferencesKey("auto_backup")
     }
 
     val tokenFlow: Flow<String?> = dataStore.data.map { it[AUTH_TOKEN] }
     val emailFlow: Flow<String?> = dataStore.data.map { it[USER_EMAIL] }
     val lastSyncAtFlow: Flow<Long?> = dataStore.data.map { it[LAST_SYNC_AT] }
-    val autoBackupFlow: Flow<Boolean> = dataStore.data.map { it[AUTO_BACKUP] ?: false }
 
     @Volatile
     var cachedToken: String? = null
@@ -63,12 +58,6 @@ class AuthTokenStore @Inject constructor(
     suspend fun setLastSyncAt(time: Long) {
         dataStore.edit { prefs ->
             prefs[LAST_SYNC_AT] = time
-        }
-    }
-
-    suspend fun setAutoBackup(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[AUTO_BACKUP] = enabled
         }
     }
 }

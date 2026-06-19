@@ -9,6 +9,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.psy.ui.auth.LoginScreen
 import com.psy.ui.lock.LockScreen
 import com.psy.ui.navigation.PsyNavHost
 import com.psy.ui.theme.PsyTheme
@@ -18,6 +19,7 @@ fun AppRoot() {
     val vm: AppViewModel = hiltViewModel()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val locked by vm.isLocked.collectAsStateWithLifecycle()
+    val signedIn by vm.isSignedIn.collectAsStateWithLifecycle()
 
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
@@ -33,14 +35,14 @@ fun AppRoot() {
     }
 
     PsyTheme(themeMode = settings.themeMode, accent = settings.accent) {
-        if (locked) {
-            LockScreen(
+        when {
+            !signedIn -> LoginScreen(viewModel = vm)
+            locked -> LockScreen(
                 onUnlock = vm::unlock,
                 biometricEnabled = settings.biometricEnabled,
                 verifyPin = { vm.verifyPin(it) },
             )
-        } else {
-            PsyNavHost()
+            else -> PsyNavHost(onLogout = { vm.logout() })
         }
     }
 }

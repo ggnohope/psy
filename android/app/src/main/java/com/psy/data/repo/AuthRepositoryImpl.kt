@@ -2,7 +2,6 @@ package com.psy.data.repo
 
 import com.psy.data.auth.AuthTokenStore
 import com.psy.data.remote.AuthApi
-import com.psy.data.remote.dto.DevLoginRequest
 import com.psy.data.remote.dto.GoogleLoginRequest
 import com.psy.domain.repository.AuthRepository
 import com.psy.domain.repository.AuthState
@@ -20,11 +19,6 @@ class AuthRepositoryImpl @Inject constructor(
         tokenStore.emailFlow
     ) { token, email ->
         AuthState(signedIn = token != null, email = email)
-    }
-
-    override suspend fun signInDev(email: String): Result<Unit> = runCatching {
-        val response = authApi.devLogin(DevLoginRequest(email = email))
-        tokenStore.setAuth(response.token, email)
     }
 
     override suspend fun signInGoogle(idToken: String): Result<Unit> = runCatching {

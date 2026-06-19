@@ -4,6 +4,7 @@ import com.psy.data.auth.AuthTokenStore
 import com.psy.data.backup.SnapshotManager
 import com.psy.data.remote.BackupApi
 import com.psy.data.remote.dto.BackupRequest
+import com.psy.data.seed.DefaultDataSeeder
 import com.psy.domain.repository.BackupRepository
 import com.psy.domain.repository.RestoreOutcome
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +14,7 @@ class BackupRepositoryImpl @Inject constructor(
     private val backupApi: BackupApi,
     private val snapshotManager: SnapshotManager,
     private val tokenStore: AuthTokenStore,
+    private val seeder: DefaultDataSeeder,
 ) : BackupRepository {
 
     override val lastSyncAt: Flow<Long?> = tokenStore.lastSyncAtFlow
@@ -31,5 +33,19 @@ class BackupRepositoryImpl @Inject constructor(
             snapshotManager.import(resp.body()!!.blob)
             RestoreOutcome.Restored
         }
+    }
+
+    override suspend fun prepareLocalDataAfterLogin() {
+        if (!snapshotManager.isLocalEmpty()) return
+        val resp = backupApi.download()
+        if (resp.code() != 204 && resp.body() != null) {
+            snapshotManager.import(resp.body()!!.blob)
+        } else {
+            seeder.seedIfEmpty(System.currentTimeMillis())
+        }
+    }
+
+    override suspend fun wipeLocal() {
+        snapshotManager.wipeLocal()
     }
 }

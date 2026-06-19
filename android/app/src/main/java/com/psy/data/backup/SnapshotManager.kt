@@ -20,6 +20,23 @@ class SnapshotManager @Inject constructor(
     private val json: Json,
 ) {
 
+    /** Cheap emptiness check: true when there are no ledgers (hence no usable data). */
+    suspend fun isLocalEmpty(): Boolean = ledgerDao.count() == 0
+
+    /**
+     * Clear all local data in a single atomic transaction.
+     * Children are deleted before parents (consistent with FK semantics).
+     */
+    suspend fun wipeLocal() {
+        db.withTransaction {
+            transactionDao.deleteAll()
+            budgetDao.deleteAll()
+            categoryDao.deleteAll()
+            accountDao.deleteAll()
+            ledgerDao.deleteAll()
+        }
+    }
+
     /** Read every table and encode to a JSON string. */
     suspend fun export(): String {
         val snapshot = SnapshotDto(

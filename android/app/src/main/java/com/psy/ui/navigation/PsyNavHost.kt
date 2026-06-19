@@ -18,7 +18,6 @@ import com.psy.ui.calendar.CalendarScreen
 import com.psy.ui.home.HomeScreen
 import com.psy.ui.manage.account.ManageAccountsScreen
 import com.psy.ui.manage.category.ManageCategoriesScreen
-import com.psy.ui.backup.BackupScreen
 import com.psy.ui.settings.AppearanceScreen
 import com.psy.ui.settings.LockSettingsScreen
 import com.psy.ui.settings.SettingsScreen
@@ -27,7 +26,7 @@ import com.psy.ui.stats.StatsScreen
 private val bottomBarRoutes = setOf(Routes.HOME, Routes.STATS, Routes.CALENDAR, Routes.BUDGET)
 
 @Composable
-fun PsyNavHost() {
+fun PsyNavHost(onLogout: () -> Unit) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -92,12 +91,8 @@ fun PsyNavHost() {
                     onManageAccounts = { navController.navigate(Routes.MANAGE_ACCOUNTS) },
                     onAppearance = { navController.navigate(Routes.APPEARANCE) },
                     onLockSettings = { navController.navigate(Routes.LOCK_SETTINGS) },
-                    onBackup = { navController.navigate(Routes.BACKUP) },
+                    onLogout = onLogout,
                 )
-            }
-
-            composable(Routes.BACKUP) {
-                BackupScreen(onBack = { navController.popBackStack() })
             }
 
             composable(Routes.APPEARANCE) {
