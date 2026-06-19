@@ -25,7 +25,6 @@ func NewRouter(cfg config.Config, pool *pgxpool.Pool) chi.Router {
 	r.Get("/health", handleHealth)
 
 	// Auth routes (no JWT required)
-	r.Post("/auth/dev", h.handleDevLogin)
 	r.Post("/auth/google", h.handleGoogleLogin)
 
 	// Backup routes (JWT required)

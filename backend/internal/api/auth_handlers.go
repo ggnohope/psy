@@ -8,35 +8,6 @@ import (
 	"github.com/hoalam/psy/backend/internal/user"
 )
 
-// handleDevLogin signs in a user with a dev email (no real OAuth).
-// Returns 404 when DEV_LOGIN_ENABLED is false.
-func (h *Handlers) handleDevLogin(w http.ResponseWriter, r *http.Request) {
-	if !h.cfg.DevLoginEnabled {
-		http.NotFound(w, r)
-		return
-	}
-	var req struct {
-		Email string `json:"email"`
-		Name  string `json:"name"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "email required"})
-		return
-	}
-	sub := "dev:" + req.Email
-	userID, err := user.UpsertBySub(r.Context(), h.pool, sub, req.Email)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "upsert user: " + err.Error()})
-		return
-	}
-	token, err := auth.IssueJWT(userID, h.cfg.JWTSecret)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "issue jwt: " + err.Error()})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"token": token})
-}
-
 // handleGoogleLogin validates a Google ID token and returns a JWT.
 // Returns 503 when GOOGLE_CLIENT_ID is not configured.
 func (h *Handlers) handleGoogleLogin(w http.ResponseWriter, r *http.Request) {

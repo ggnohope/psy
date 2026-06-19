@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/hoalam/psy/backend/internal/auth"
 	"github.com/hoalam/psy/backend/internal/config"
 	"github.com/hoalam/psy/backend/internal/db"
+	"github.com/hoalam/psy/backend/internal/user"
 )
 
 func TestBackupHandlers(t *testing.T) {
@@ -34,32 +34,21 @@ func TestBackupHandlers(t *testing.T) {
 
 	const jwtSecret = "test-secret"
 	cfg := config.Config{
-		JWTSecret:       jwtSecret,
-		DevLoginEnabled: true,
+		JWTSecret: jwtSecret,
 	}
 	router := NewRouter(cfg, pool)
 
-	// --- dev login to get a real token ---
-	loginBody := `{"email":"testuser@example.com"}`
-	loginReq := httptest.NewRequest(http.MethodPost, "/auth/dev", strings.NewReader(loginBody))
-	loginReq.Header.Set("Content-Type", "application/json")
-	loginRec := httptest.NewRecorder()
-	router.ServeHTTP(loginRec, loginReq)
-
-	if loginRec.Code != http.StatusOK {
-		t.Fatalf("dev login status = %d, body = %s", loginRec.Code, loginRec.Body.String())
+	// --- seed a test user and issue a JWT directly ---
+	userID, err := user.UpsertBySub(ctx, pool, "test-sub", "test@example.com")
+	if err != nil {
+		t.Fatalf("seed test user: %v", err)
 	}
-	var loginResp struct {
-		Token string `json:"token"`
-	}
-	if err := json.NewDecoder(loginRec.Body).Decode(&loginResp); err != nil {
-		t.Fatalf("decode login response: %v", err)
-	}
-	if loginResp.Token == "" {
-		t.Fatal("dev login returned empty token")
+	token, err := auth.IssueJWT(userID, jwtSecret)
+	if err != nil {
+		t.Fatalf("issue JWT: %v", err)
 	}
 
-	bearerHeader := "Bearer " + loginResp.Token
+	bearerHeader := "Bearer " + token
 
 	// --- 401 when no Authorization header ---
 	t.Run("GET /backup without token returns 401", func(t *testing.T) {
@@ -175,12 +164,12 @@ func TestBackupHandlers(t *testing.T) {
 
 	// --- Direct JWT issue/verify round-trip (pure, no DB needed but here for completeness) ---
 	t.Run("JWT issued for DB user parses to correct userID", func(t *testing.T) {
-		userID, err := auth.ParseJWT(loginResp.Token, jwtSecret)
+		parsedID, err := auth.ParseJWT(token, jwtSecret)
 		if err != nil {
 			t.Fatalf("ParseJWT: %v", err)
 		}
-		if userID <= 0 {
-			t.Errorf("userID = %d, want > 0", userID)
+		if parsedID <= 0 {
+			t.Errorf("userID = %d, want > 0", parsedID)
 		}
 	})
 }
