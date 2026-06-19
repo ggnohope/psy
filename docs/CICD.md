@@ -26,12 +26,18 @@ GitHub Actions. 4 workflow trong `.github/workflows/`.
 **Backend (deploy EC2):**
 | Secret | Giá trị |
 |---|---|
+| `AWS_DEPLOY_ROLE_ARN` | `arn:aws:iam::529088301474:role/psy-github-deploy` (OIDC role, đã tạo) |
 | `EC2_HOST` | IP / DNS của EC2 |
 | `EC2_USER` | user SSH (vd `ubuntu` hoặc `ec2-user`) |
 | `EC2_SSH_KEY` | **toàn bộ nội dung** `psy-backend-ssh.pem` (gồm cả dòng BEGIN/END) |
 | `GHCR_TOKEN` | GitHub PAT scope `read:packages` (để EC2 pull image private) |
 
 > Push image lên GHCR dùng `GITHUB_TOKEN` mặc định (không cần tạo). `GHCR_TOKEN` chỉ để EC2 *pull*.
+
+### Deploy không mở SSH ra Internet (OIDC + dynamic SG)
+SG giữ SSH (22) khoá về IP của bạn. Khi deploy, workflow assume IAM role qua **GitHub OIDC** (không AWS key dài hạn), tự **mở 22 cho đúng IP runner** rồi **đóng lại** (`if: always()`). AWS đã setup sẵn (qua CLI):
+- OIDC provider `token.actions.githubusercontent.com`.
+- IAM role `psy-github-deploy` — trust `repo:ggnohope/psy:ref:refs/heads/main`; policy chỉ `ec2:Authorize/RevokeSecurityGroupIngress` trên `sg-0901eba322f854af8` + `DescribeSecurityGroups`.
 
 ---
 
