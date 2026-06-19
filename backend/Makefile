@@ -8,7 +8,7 @@ DATABASE_URL     ?= postgres://psy:psy@localhost:5433/psy?sslmode=disable
 JWT_SECRET       ?= dev-secret-change-me
 GOOGLE_CLIENT_ID ?= 885786271406-u79onredebj2udsoaen122vphe3pk8hd.apps.googleusercontent.com
 
-.PHONY: help db-up db-down db-reset db-logs psql server dev test build vet tidy
+.PHONY: help db-up db-down db-reset db-logs psql server dev stack test build vet tidy
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -33,6 +33,10 @@ server: ## Run the Go server (requires Postgres up)
 	PORT=$(PORT) DATABASE_URL="$(DATABASE_URL)" JWT_SECRET=$(JWT_SECRET) GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID) go run ./cmd/server
 
 dev: db-up server ## Start Postgres then run the server (one command)
+
+stack: ## Build + run the FULL stack in Docker (postgres + server, profile=full)
+	docker compose --profile full up -d --build
+	@echo "stack up: server on :8080, postgres on :5433"
 
 test: ## Run Go tests (set TEST_DATABASE_URL to run DB-gated tests)
 	go test ./...

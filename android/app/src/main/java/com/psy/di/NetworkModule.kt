@@ -1,12 +1,15 @@
 package com.psy.di
 
+import android.content.Context
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.psy.R
 import com.psy.data.auth.AuthTokenStore
 import com.psy.data.remote.AuthApi
 import com.psy.data.remote.BackupApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -17,9 +20,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-
-    // Emulator-to-host loopback. Override per build type in a later plan.
-    private const val BASE_URL = "http://10.0.2.2:8080/"
 
     @Provides
     @Singleton
@@ -44,9 +44,13 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(json: Json, okHttp: OkHttpClient): Retrofit =
+    fun provideRetrofit(
+        json: Json,
+        okHttp: OkHttpClient,
+        @ApplicationContext context: Context,
+    ): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(context.getString(R.string.base_url))
             .client(okHttp)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()

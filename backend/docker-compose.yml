@@ -16,5 +16,21 @@ services:
       timeout: 3s
       retries: 30
 
+  # Full backend in Docker. Only starts with `--profile full` (dev normally uses `make server`/go run).
+  server:
+    profiles: ["full"]
+    build: .
+    container_name: psy-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://psy:psy@postgres:5432/psy?sslmode=disable"   # internal service host:port
+      JWT_SECRET: "${JWT_SECRET:-dev-secret-change-me}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-885786271406-u79onredebj2udsoaen122vphe3pk8hd.apps.googleusercontent.com}"
+    ports:
+      - "8080:8080"
+
 volumes:
   psy_pgdata:

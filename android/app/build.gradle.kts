@@ -22,6 +22,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Backend base URL as a string resource (reliably visible to Hilt/KSP + at runtime).
+        // Default = emulator→host loopback (dev). Release overrides below.
+        resValue("string", "base_url", "http://10.0.2.2:8080/")
     }
 
     buildTypes {
@@ -31,6 +35,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // TODO: point this at your hosted backend (HTTPS) before releasing.
+            resValue("string", "base_url", "https://your-backend.example.com/")
         }
     }
     compileOptions {
@@ -39,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        resValues = true
     }
     testOptions {
         unitTests {

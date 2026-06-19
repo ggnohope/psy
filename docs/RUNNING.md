@@ -93,12 +93,29 @@ git push -u origin main
 
 ---
 
-## E. Chạy trên điện thoại thật
+## E. Đổi BASE_URL (emulator / máy thật)
 
-`10.0.2.2` chỉ đúng với **emulator**. Trên máy thật, app phải trỏ tới **IP LAN của máy tính** chạy backend:
-1) Lấy IP máy tính: `ipconfig getifaddr en0` (vd `192.168.1.20`).
-2) Sửa `BASE_URL` trong `android/app/src/main/java/com/psy/di/NetworkModule.kt`
-   từ `http://10.0.2.2:8080/` thành `http://192.168.1.20:8080/` (cùng Wi-Fi).
-3) (Vì là HTTP) đảm bảo `network_security_config.xml` cho phép cleartext tới IP đó, hoặc dựng HTTPS.
+BASE_URL giờ là **string resource `base_url`** khai trong `android/app/build.gradle.kts` (không hardcode trong code nữa):
+- **debug** (defaultConfig): `http://10.0.2.2:8080/` (emulator → host).
+- **release**: `https://your-backend.example.com/` (đổi thành backend đã host).
 
-> Gợi ý nâng cấp sau: chuyển `BASE_URL` thành `BuildConfig` field theo build type thay vì hardcode.
+Chạy trên **máy thật** (chung Wi-Fi với máy chạy backend dev):
+1) Lấy IP LAN: `ipconfig getifaddr en0` (vd `192.168.1.20`).
+2) Đổi `resValue("string", "base_url", ...)` ở **defaultConfig** thành `http://192.168.1.20:8080/`.
+3) HTTP cleartext: thêm IP đó vào `res/xml/network_security_config.xml` (hoặc dùng HTTPS).
+
+## F. Deploy backend (production)
+
+Backend đã có `backend/Dockerfile` (multi-stage, ảnh distroless nhỏ; migration nhúng sẵn nên tự chạy lúc khởi động).
+
+**Chạy full stack bằng Docker (local):**
+```bash
+cd backend && make stack        # docker compose --profile full up -d --build (postgres + server)
+```
+
+**Host lên cloud (Render / Railway / Fly.io / VPS):**
+1) Trỏ service vào `backend/Dockerfile` (các nền tảng này tự build từ Dockerfile).
+2) Đặt env: `DATABASE_URL` (Postgres managed của nền tảng), `JWT_SECRET` (chuỗi mạnh, bí mật), `GOOGLE_CLIENT_ID` (Web client ID), `PORT` (thường nền tảng tự set).
+3) Sau khi có domain HTTPS → sửa `base_url` của **release** trong `app/build.gradle.kts` thành domain đó, build **release APK** gửi người thân.
+
+> Lưu ý prod: `JWT_SECRET` mạnh & bí mật; chạy sau **HTTPS** (khi đó có thể bỏ cleartext trong `network_security_config.xml`, chỉ giữ cho dev host).
