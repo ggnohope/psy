@@ -1,0 +1,39 @@
+# Production stack for EC2. Pulls the pre-built image from GHCR (CI pushes it).
+# Secrets come from a `.env` file placed next to this file on the server
+# (JWT_SECRET, GOOGLE_CLIENT_ID, POSTGRES_PASSWORD) — NEVER commit that .env.
+# TLS is terminated by a reverse proxy in front (e.g. nginx/caddy on the host);
+# this stack only exposes the app on :8080.
+services:
+  postgres:
+    image: postgres:16
+    container_name: psy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: psy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-psy}
+      POSTGRES_DB: psy
+    volumes:
+      - psy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U psy -d psy"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  server:
+    image: ghcr.io/ggnohope/psy-backend:latest
+    container_name: psy-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://psy:${POSTGRES_PASSWORD:-psy}@postgres:5432/psy?sslmode=disable"
+      JWT_SECRET: "${JWT_SECRET:?set JWT_SECRET in .env}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID in .env}"
+    ports:
+      - "8080:8080"
+
+volumes:
+  psy_pgdata:
