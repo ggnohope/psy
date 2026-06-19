@@ -1,0 +1,6 @@
+# Secrets — never commit
+# (.gitignore does not support inline comments; keep patterns on their own lines)
+.env
+# SSH / TLS private keys (e.g. server access key)
+*.pem
+*.key
