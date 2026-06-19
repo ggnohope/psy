@@ -1,6 +1,8 @@
 package com.psy.ui.stats
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,11 +35,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.psy.domain.model.Account
+import com.psy.domain.model.Currency
 import com.psy.domain.model.TxType
 import com.psy.domain.util.Money
 import com.psy.ui.components.MonthSelector
 import com.psy.ui.components.charts.DonutChart
 import com.psy.ui.components.charts.TrendBars
+import com.psy.ui.theme.CandyGreen
+import com.psy.ui.theme.CandyPinkDeep
 import com.psy.ui.theme.CandySky
 import com.psy.ui.theme.CandyViolet
 
@@ -66,8 +72,26 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
                 onNext = viewModel::nextMonth,
             )
 
+            // ── Account filter chips ──────────────────────────────────────
+            if (state.accounts.isNotEmpty()) {
+                AccountChipRow(
+                    accounts = state.accounts,
+                    selectedAccountId = state.selectedAccountId,
+                    onSelect = viewModel::selectAccount,
+                )
+            }
+
             // ── Summary card ──────────────────────────────────────────────
             SummaryCard(state = state)
+
+            // ── Per-account comparison (only in "Tất cả" mode) ────────────
+            if (state.selectedAccountId == null) {
+                AccountBreakdownCard(
+                    breakdown = state.accountBreakdown,
+                    currency = state.currency,
+                    onSelect = viewModel::selectAccount,
+                )
+            }
 
             // ── Chi / Thu segmented toggle ────────────────────────────────
             PieModeToggle(
@@ -337,10 +361,200 @@ private fun PieModeToggleItem(
     }
 }
 
+// ── Account filter chips ───────────────────────────────────────────────────
+
+@Composable
+private fun AccountChipRow(
+    accounts: List<Account>,
+    selectedAccountId: Long?,
+    onSelect: (Long?) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AccountChip(
+            label = "Tất cả",
+            selected = selectedAccountId == null,
+            onClick = { onSelect(null) },
+        )
+        accounts.forEach { account ->
+            AccountChip(
+                label = "${account.icon} ${account.name}",
+                selected = selectedAccountId == account.id,
+                onClick = { onSelect(account.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun AccountChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val bgColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+    val textColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(bgColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = label,
+            color = textColor,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+        )
+    }
+}
+
+// ── Per-account comparison card ─────────────────────────────────────────────
+
+@Composable
+private fun AccountBreakdownCard(
+    breakdown: List<AccountStat>,
+    currency: Currency,
+    onSelect: (Long?) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "💜 Theo tài khoản",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            // Legend: thu / chi
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LegendDot(CandyGreen); Spacer(Modifier.width(4.dp))
+                Text("Thu", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(10.dp))
+                LegendDot(CandyPinkDeep); Spacer(Modifier.width(4.dp))
+                Text("Chi", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        if (breakdown.isEmpty()) {
+            Text(
+                text = "Kỳ này chưa có giao dịch theo tài khoản",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            // Scale all bars against the largest single income/expense across accounts.
+            val maxValue = breakdown.maxOf { maxOf(it.incomeMinor, it.expenseMinor) }.coerceAtLeast(1L)
+            breakdown.forEach { stat ->
+                AccountBreakdownRow(
+                    stat = stat,
+                    maxValue = maxValue,
+                    currency = currency,
+                    onClick = { onSelect(stat.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountBreakdownRow(
+    stat: AccountStat,
+    maxValue: Long,
+    currency: Currency,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(stat.color).copy(alpha = 0.18f)),
+        ) {
+            Text(text = stat.icon, style = MaterialTheme.typography.bodyMedium)
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stat.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = Money.formatMinor(stat.netMinor, currency.fractionDigits, currency.symbol),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (stat.netMinor >= 0L) CandyGreen else CandyPinkDeep,
+                )
+            }
+            BarLine(fraction = stat.incomeMinor.toFloat() / maxValue.toFloat(), color = CandyGreen)
+            BarLine(fraction = stat.expenseMinor.toFloat() / maxValue.toFloat(), color = CandyPinkDeep)
+        }
+    }
+}
+
+@Composable
+private fun BarLine(fraction: Float, color: Color) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
+                .height(6.dp)
+                .clip(RoundedCornerShape(50))
+                .background(color),
+        )
+    }
+}
+
+@Composable
+private fun LegendDot(color: Color) {
+    Box(
+        modifier = Modifier
+            .size(8.dp)
+            .clip(CircleShape)
+            .background(color),
+    )
+}
+
 @Composable
 private fun TopEntryRow(
     entry: TopEntry,
-    currency: com.psy.domain.model.Currency,
+    currency: Currency,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),

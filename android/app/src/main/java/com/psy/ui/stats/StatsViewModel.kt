@@ -2,9 +2,11 @@ package com.psy.ui.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.psy.domain.model.Account
 import com.psy.domain.model.Category
 import com.psy.domain.model.Currency
 import com.psy.domain.model.TxType
+import com.psy.domain.repository.AccountRepository
 import com.psy.domain.repository.CategoryRepository
 import com.psy.domain.repository.LedgerRepository
 import com.psy.domain.repository.TransactionRepository
@@ -41,6 +43,17 @@ data class TopEntry(
     val percent: Float,
 )
 
+/** Income/expense rollup for a single account in the selected month (transfers excluded). */
+data class AccountStat(
+    val id: Long,
+    val name: String,
+    val icon: String,
+    val color: Long,
+    val incomeMinor: Long,
+    val expenseMinor: Long,
+    val netMinor: Long,
+)
+
 data class StatsUiState(
     val monthLabel: YearMonth = YearMonth.now(),
     val currency: Currency = Currency.VND,
@@ -49,6 +62,10 @@ data class StatsUiState(
     val slices: List<PieSlice> = emptyList(),
     val top: List<TopEntry> = emptyList(),
     val trend: List<MonthBars> = emptyList(),
+    // Account dimension
+    val accounts: List<Account> = emptyList(),
+    val accountBreakdown: List<AccountStat> = emptyList(),
+    val selectedAccountId: Long? = null,
     val loading: Boolean = true,
 )
 
@@ -61,10 +78,14 @@ class StatsViewModel @Inject constructor(
     private val ledgerRepo: LedgerRepository,
     private val transactionRepo: TransactionRepository,
     private val categoryRepo: CategoryRepository,
+    private val accountRepo: AccountRepository,
 ) : ViewModel() {
 
     val selectedMonth: MutableStateFlow<YearMonth> = MutableStateFlow(YearMonth.now())
     val pieMode: MutableStateFlow<TxType> = MutableStateFlow(TxType.EXPENSE)
+
+    /** null = "Tất cả" (all accounts); otherwise stats are filtered to this account. */
+    val accountFilter: MutableStateFlow<Long?> = MutableStateFlow(null)
 
     fun prevMonth() {
         selectedMonth.value = selectedMonth.value.minusMonths(1)
@@ -76,6 +97,10 @@ class StatsViewModel @Inject constructor(
 
     fun setPieMode(type: TxType) {
         pieMode.value = type
+    }
+
+    fun selectAccount(id: Long?) {
+        accountFilter.value = id
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -102,11 +127,48 @@ class StatsViewModel @Inject constructor(
                     windowFlow,
                     categoryRepo.observeAll(),
                     pieMode,
-                ) { windowTxns, categories, currentPieMode ->
+                    accountRepo.observeAll(),
+                    accountFilter,
+                ) { windowTxns, categories, currentPieMode, accounts, currentAccountFilter ->
                     val categoryMap = categories.associateBy { it.id }
 
-                    // Separate month txns from the window
-                    val monthTxns = windowTxns.filter { tx -> tx.date >= monthStart && tx.date < monthEnd }
+                    // ── Per-account breakdown (computed from ALL accounts, before filtering) ──
+                    // Always reflects the full month so the comparison card can compare accounts.
+                    val monthTxnsAll = windowTxns.filter { tx -> tx.date >= monthStart && tx.date < monthEnd }
+                    val accountMap = accounts.associateBy { it.id }
+                    val byAccount = HashMap<Long, LongArray>() // accountId -> [income, expense]
+                    monthTxnsAll.forEach { tx ->
+                        when (tx.type) {
+                            TxType.INCOME -> byAccount.getOrPut(tx.accountId) { LongArray(2) }[0] += tx.amountMinor
+                            TxType.EXPENSE -> byAccount.getOrPut(tx.accountId) { LongArray(2) }[1] += tx.amountMinor
+                            TxType.TRANSFER -> Unit // transfers are not income/expense
+                        }
+                    }
+                    val accountBreakdown = byAccount
+                        .mapNotNull { (id, sums) ->
+                            val acc = accountMap[id] ?: return@mapNotNull null
+                            AccountStat(
+                                id = acc.id,
+                                name = acc.name,
+                                icon = acc.icon,
+                                color = acc.color,
+                                incomeMinor = sums[0],
+                                expenseMinor = sums[1],
+                                netMinor = sums[0] - sums[1],
+                            )
+                        }
+                        .sortedByDescending { it.incomeMinor + it.expenseMinor }
+
+                    // Drop the filter if the selected account no longer exists.
+                    val effectiveFilter = currentAccountFilter?.takeIf { accountMap.containsKey(it) }
+
+                    // Apply account filter to the whole window; summary/pie/trend/top derive from it.
+                    val filteredWindow =
+                        if (effectiveFilter == null) windowTxns
+                        else windowTxns.filter { it.accountId == effectiveFilter }
+
+                    // Separate month txns from the (filtered) window
+                    val monthTxns = filteredWindow.filter { tx -> tx.date >= monthStart && tx.date < monthEnd }
 
                     // ── Summary ──────────────────────────────────────────────
                     var incomeMinor = 0L
@@ -163,7 +225,7 @@ class StatsViewModel @Inject constructor(
                     val trend = trendMonths.map { ym ->
                         val ymStart = ym.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
                         val ymEnd = ym.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
-                        val ymTxns = windowTxns.filter { tx -> tx.date >= ymStart && tx.date < ymEnd }
+                        val ymTxns = filteredWindow.filter { tx -> tx.date >= ymStart && tx.date < ymEnd }
 
                         var ymIncome = 0L
                         var ymExpense = 0L
@@ -191,6 +253,9 @@ class StatsViewModel @Inject constructor(
                         slices = slices,
                         top = top,
                         trend = trend,
+                        accounts = accounts,
+                        accountBreakdown = accountBreakdown,
+                        selectedAccountId = effectiveFilter,
                         loading = false,
                     )
                 }
