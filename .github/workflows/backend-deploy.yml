@@ -9,10 +9,12 @@ on:
 
 concurrency:
   group: backend-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false   # never cancel mid-deploy, so the SG always gets closed
 
 env:
   IMAGE: ghcr.io/ggnohope/psy-backend
+  AWS_REGION: ap-southeast-1
+  SG_ID: sg-0901eba322f854af8
 
 jobs:
   deploy:
@@ -20,6 +22,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write   # required for AWS OIDC
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +43,23 @@ jobs:
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
 
+      # OIDC: assume a scoped IAM role (no long-lived AWS keys in CI).
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Open SSH (22) for just this runner's IP, for just this deploy.
+      - name: Open SSH to runner IP
+        run: |
+          RUNNER_IP=$(curl -fsS https://api.ipify.org)
+          echo "RUNNER_IP=$RUNNER_IP" >> "$GITHUB_ENV"
+          aws ec2 authorize-security-group-ingress \
+            --group-id "$SG_ID" \
+            --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${RUNNER_IP}/32,Description=gh-actions-deploy}]"
+          echo "Opened 22 for ${RUNNER_IP}/32"
+
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1
         with:
@@ -48,8 +68,19 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ggnohope --password-stdin
+            if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
+              echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ggnohope --password-stdin
+            fi
             cd ~/psy/backend
             docker compose -f docker-compose.prod.yml pull server
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
+
+      # Always close the temporary rule, even if the deploy step failed.
+      - name: Close SSH
+        if: always() && env.RUNNER_IP != ''
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$SG_ID" \
+            --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${RUNNER_IP}/32}]" || true
+          echo "Closed 22 for ${RUNNER_IP}/32"
