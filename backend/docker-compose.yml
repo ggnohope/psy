@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: psy-postgres
+    environment:
+      POSTGRES_USER: psy
+      POSTGRES_PASSWORD: psy
+      POSTGRES_DB: psy
+    ports:
+      - "5433:5432"            # 5433 on host (5432 may be used by other projects)
+    volumes:
+      - psy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U psy -d psy"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  psy_pgdata:

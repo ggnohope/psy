@@ -9,3 +9,4 @@ build/
 # Go
 /backend/bin/
 *.env
+/backend/.env
