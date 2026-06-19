@@ -1,8 +1,13 @@
 package com.psy.ui.app
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle.Event.ON_START
 import androidx.lifecycle.Lifecycle.Event.ON_STOP
 import androidx.lifecycle.LifecycleEventObserver
@@ -36,7 +41,8 @@ fun AppRoot() {
 
     PsyTheme(themeMode = settings.themeMode, accent = settings.accent) {
         when {
-            !signedIn -> LoginScreen(viewModel = vm)
+            signedIn == null -> LoadingGate()            // unknown yet → avoid LoginScreen flash
+            signedIn == false -> LoginScreen(viewModel = vm)
             locked -> LockScreen(
                 onUnlock = vm::unlock,
                 biometricEnabled = settings.biometricEnabled,
@@ -44,5 +50,12 @@ fun AppRoot() {
             )
             else -> PsyNavHost(onLogout = { vm.logout() })
         }
+    }
+}
+
+@Composable
+private fun LoadingGate() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
     }
 }

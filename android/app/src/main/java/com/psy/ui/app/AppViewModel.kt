@@ -40,13 +40,17 @@ class AppViewModel @Inject constructor(
         initialValue = SettingsState(),
     )
 
-    /** "Signed in" = a JWT is stored (presence check only — offline OK after first login). */
-    val isSignedIn: StateFlow<Boolean> = tokenStore.tokenFlow
+    /**
+     * "Signed in" = a JWT is stored (presence check only — offline OK after first login).
+     * Tri-state: null = unknown/loading (until DataStore emits) so the gate shows a loader
+     * instead of flashing the LoginScreen for an already-signed-in user on cold start.
+     */
+    val isSignedIn: StateFlow<Boolean?> = tokenStore.tokenFlow
         .map { it != null }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = false,
+            initialValue = null,
         )
 
     private val _uiMessage = MutableStateFlow<String?>(null)
