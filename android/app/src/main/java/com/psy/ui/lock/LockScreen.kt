@@ -3,7 +3,6 @@ package com.psy.ui.lock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,10 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,15 +26,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
+import com.psy.ui.components.KeypadButton
+import com.psy.ui.components.PinDot
 import kotlinx.coroutines.launch
 
-private const val PIN_MAX_LENGTH = 6
+private const val PIN_MAX_LENGTH = 4
 
 @Composable
 fun LockScreen(
@@ -71,7 +69,7 @@ fun LockScreen(
         if (pin.length < PIN_MAX_LENGTH) {
             pin += digit
             error = ""
-            // Auto-submit when 6 digits entered
+            // Auto-submit when 4 digits entered
             if (pin.length == PIN_MAX_LENGTH) {
                 val currentPin = pin
                 scope.launch {
@@ -87,19 +85,6 @@ fun LockScreen(
 
     fun deleteLastDigit() {
         if (pin.isNotEmpty()) pin = pin.dropLast(1)
-    }
-
-    fun submitPin() {
-        if (pin.length in 4..PIN_MAX_LENGTH) {
-            val currentPin = pin
-            scope.launch {
-                if (verifyPin(currentPin)) onUnlock()
-                else {
-                    error = "Sai PIN, thử lại"
-                    pin = ""
-                }
-            }
-        }
     }
 
     Column(
@@ -203,18 +188,9 @@ fun LockScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Confirm button when 4–5 digits entered (6 digits auto-submits)
-        if (pin.length in 4 until PIN_MAX_LENGTH) {
-            FilledTonalButton(onClick = { submitPin() }) {
-                Text("Mở khoá")
-            }
-        }
-
         // Biometric prompt shortcut button
         if (biometricEnabled) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             TextButton(
                 onClick = {
                     (context as? FragmentActivity)?.let { activity ->
@@ -228,45 +204,6 @@ fun LockScreen(
             ) {
                 Text("Vân tay / Khuôn mặt")
             }
-        }
-    }
-}
-
-@Composable
-private fun PinDot(filled: Boolean) {
-    Box(
-        modifier = Modifier
-            .size(16.dp)
-            .clip(CircleShape)
-            .background(
-                if (filled) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.outline,
-            ),
-    )
-}
-
-@Composable
-private fun KeypadButton(label: String, onClick: () -> Unit) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(64.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .then(
-                Modifier.padding(0.dp), // tappable area handled by clip+background
-            ),
-    ) {
-        TextButton(
-            onClick = onClick,
-            modifier = Modifier.size(64.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

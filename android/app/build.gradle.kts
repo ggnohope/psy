@@ -27,8 +27,10 @@ android {
         applicationId = "com.psy"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        // CI release derives these from the git tag (VERSION_NAME) + run number (VERSION_CODE);
+        // local builds fall back to 1 / "1.0". See release.yml + docs/CICD.md.
+        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
+        versionName = System.getenv("VERSION_NAME") ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

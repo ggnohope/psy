@@ -1,13 +1,16 @@
 # CI/CD — Psy
 
-GitHub Actions. 4 workflow trong `.github/workflows/`.
+GitHub Actions. 5 workflow trong `.github/workflows/`.
 
 | Workflow | Trigger | Việc |
 |---|---|---|
 | `android-ci.yml` | push/PR đụng `android/**` | `assembleDebug` + `lintDebug` |
-| `android-release.yml` | tag `v*` | build **signed release APK** → đính vào GitHub Release |
+| `ios-ci.yml` | push/PR đụng `ios/**` | `swift test` (PsyCore) + `xcodebuild test` (simulator) — runner **macOS** |
+| `release.yml` | tag `v*` | build **signed APK (Android)** + **unsigned IPA (iOS, sideload)**, cùng version từ tag → đính cả hai vào 1 GitHub Release |
 | `backend-ci.yml` | push/PR đụng `backend/**` | `go vet` + `build` + `test` (Postgres service) |
 | `backend-deploy.yml` | push `main` đụng `backend/**` | build image → GHCR → SSH vào EC2 `pull && up -d` |
+
+> `release.yml` thay thế `android-release.yml` cũ — giờ release cả Android + iOS trong **một** run, cùng version + build number (xem mục Release bên dưới).
 
 ---
 
@@ -22,6 +25,10 @@ GitHub Actions. 4 workflow trong `.github/workflows/`.
 | `ANDROID_KEYSTORE_PASSWORD` | storePassword trong `keystore.properties` |
 | `ANDROID_KEY_ALIAS` | `psy` |
 | `ANDROID_KEY_PASSWORD` | keyPassword |
+
+**iOS:** KHÔNG cần secret. Job `ios` build **IPA chưa ký** (không có Apple Developer paid). Người dùng tự ký bằng Apple ID free qua **SideStore / AltStore / Sideloadly** — xem `docs/IOS-SIDELOAD.md`.
+
+> Khi nào có Apple Developer paid muốn dùng **TestFlight** (cài qua link, 90 ngày, không cần UDID/máy tính): đổi job `ios` từ build-unsigned sang `xcodebuild archive` + export App Store + upload App Store Connect API key, rồi thêm secrets `APPSTORE_*`. Git history có sẵn phiên bản ad-hoc ký bằng cert để tham khảo.
 
 **Backend (deploy EC2):**
 | Secret | Giá trị |
@@ -72,12 +79,18 @@ Lần đầu kéo image (sau khi CI đã push): `docker compose -f docker-compos
 
 - **CI**: tự chạy khi mở PR / push. Xem tab Actions.
 - **Deploy backend**: merge PR (đụng `backend/**`) vào `main` → `backend-deploy.yml` tự build + deploy.
-- **Release Android**:
+- **Release cả Android + iOS cùng lúc** — chỉ cần 1 tag, KHÔNG sửa version thủ công:
   ```bash
-  # bump versionCode/versionName trong android/app/build.gradle.kts trước
-  git tag v1.0 && git push origin v1.0
+  git tag v1.2.0 && git push origin v1.2.0
   ```
-  → `android-release.yml` build APK đã ký, đính vào Release `v1.0`. Tải về gửi người thân.
+  → `release.yml` chạy 1 run:
+  - Version lấy từ tag: `VERSION_NAME = 1.2.0` (bỏ chữ `v`); build number = `github.run_number` (tăng dần).
+  - Job `android`: APK đã ký `1.2.0 (build N)`.
+  - Job `ios`: IPA **chưa ký** `1.2.0 (build N)` (`Psy-1.2.0-unsigned.ipa`).
+  - Cả hai đính vào **một** GitHub Release `v1.2.0`. Hai bên **luôn cùng version + build**.
+  - Cài iOS: tải IPA → tự ký bằng Apple ID free qua SideStore/AltStore/Sideloadly. Xem `docs/IOS-SIDELOAD.md`.
+
+  > Version trong code (`build.gradle.kts` = `1.0`, `project.yml` MARKETING_VERSION = `1.0.0`) chỉ là fallback cho build local; release luôn override từ tag.
 
 ---
 

@@ -72,13 +72,21 @@ make dev          # khởi động Postgres (Docker) + chạy server tại :8080
 
 ## 📦 Release
 
-Build APK release đã ký:
+**Release cả Android + iOS cùng lúc** bằng 1 git tag — version tự lấy từ tag, không sửa tay:
 ```bash
-cd android
-./gradlew :app:assembleRelease   # → app/build/outputs/apk/release/app-release.apk
+git tag v1.2.0 && git push origin v1.2.0
 ```
-Cần: backend đã host HTTPS (sửa `base_url` release trong `app/build.gradle.kts`) + đăng ký SHA-1 của release keystore cho Android OAuth client. Giữ kỹ `keystore.properties` + `psy-release.jks` (gitignored) để còn cập nhật app về sau.
+→ workflow `release.yml` build **signed APK** (Android) + **unsigned IPA** (iOS), cùng `1.2.0 (build N)`, đính cả hai vào GitHub Release `v1.2.0`. Chi tiết: [docs/CICD.md](docs/CICD.md).
+
+**Cài iOS** (không cần Apple paid): tải `Psy-*-unsigned.ipa` từ Release rồi tự ký bằng Apple ID free qua **SideStore/AltStore/Sideloadly** — hướng dẫn: [docs/IOS-SIDELOAD.md](docs/IOS-SIDELOAD.md).
+
+Build local (không qua CI):
+```bash
+cd android && ./gradlew :app:assembleRelease     # → app/build/outputs/apk/release/app-release.apk
+cd ios && xcodegen generate && open Psy.xcodeproj # rồi Run ▶ lên device (Personal Team, free)
+```
+Cần: backend HTTPS đã host; Android đăng ký SHA-1 release keystore cho OAuth client (giữ kỹ `keystore.properties` + `psy-release.jks`, gitignored).
 
 ## 🛠️ Tech stack
 
-`Kotlin` · `Jetpack Compose` · `Hilt` · `Room` · `Retrofit` · `Credential Manager` · `Go` · `chi` · `pgx` · `Postgres` · `JWT` · `Docker`
+`Kotlin` · `Jetpack Compose` · `Hilt` · `Room` · `Retrofit` · `Credential Manager` · `Swift` · `SwiftUI` · `SwiftData` · `Combine` · `Swift Charts` · `GoogleSignIn` · `Go` · `chi` · `pgx` · `Postgres` · `JWT` · `Docker`
