@@ -2,25 +2,17 @@ import SwiftUI
 
 @main
 struct PsyApp: App {
+    @State private var container = AppContainer()
+
     var body: some Scene {
         WindowGroup {
-            PlaceholderRootView()
+            RootView(container: container)
                 .psyTheme(mode: .system, accent: .candyViolet)
+                .task {
+                    // Offline-first: ensure default data exists on first launch (Plan 5 moves this
+                    // behind the login gate via restore-or-seed).
+                    container.seeder.seedIfEmpty(now: Int64(Date().timeIntervalSince1970 * 1000))
+                }
         }
-    }
-}
-
-private struct PlaceholderRootView: View {
-    @Environment(\.psyColors) private var colors
-    var body: some View {
-        VStack(spacing: 12) {
-            Text("Psy 🐷").font(PsyFont.headlineMedium)
-            Text(BuildConfig.baseURL)
-                .font(PsyFont.labelSmall)
-                .foregroundStyle(colors.onSurface.opacity(0.6))
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(colors.background)
     }
 }
