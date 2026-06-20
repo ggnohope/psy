@@ -1,0 +1,2 @@
+// Simulator reaches the host machine directly via localhost (unlike Android emulator's 10.0.2.2).
+BASE_URL = http:/$()/localhost:8080/

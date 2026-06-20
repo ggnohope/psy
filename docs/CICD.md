@@ -60,6 +60,8 @@ chmod 600 .env
 echo <GHCR_TOKEN> | docker login ghcr.io -u ggnohope --password-stdin
 ```
 
+- `GOOGLE_CLIENT_IDS` (tùy chọn): danh sách audience Google ID token được chấp nhận, phân tách bằng dấu phẩy — ví dụ `WEB_CLIENT_ID,IOS_CLIENT_ID`. Cho phép cùng backend phục vụ cả Android (web client) và iOS (iOS client). Nếu để trống, fallback về `GOOGLE_CLIENT_ID` (tương thích ngược).
+
 > TLS (`https://psy-backend.duckdns.org`) do reverse proxy phía trước (nginx/caddy) đảm nhiệm — proxy `:443 → 127.0.0.1:8080`. Stack này chỉ expose `:8080`.
 
 Lần đầu kéo image (sau khi CI đã push): `docker compose -f docker-compose.prod.yml up -d`.

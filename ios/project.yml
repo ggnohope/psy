@@ -1,0 +1,57 @@
+name: Psy
+options:
+  bundleIdPrefix: com
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  PsyCore:
+    path: PsyCore
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  Psy:
+    type: application
+    platform: iOS
+    sources:
+      - Psy
+    configFiles:
+      Debug: Config/Debug.xcconfig
+      Release: Config/Release.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.psy
+        INFOPLIST_FILE: Psy/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: PsyCore
+        product: PsyCore
+  PsyTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - PsyTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.psy.tests
+    dependencies:
+      - target: Psy
+schemes:
+  Psy:
+    build:
+      targets:
+        Psy: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PsyTests
