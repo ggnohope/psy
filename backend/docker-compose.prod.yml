@@ -6,6 +6,8 @@
 services:
   postgres:
     image: postgres:16
+    ports:
+      - "5432:5432"
     container_name: psy-postgres
     restart: unless-stopped
     environment:
