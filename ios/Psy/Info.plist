@@ -32,6 +32,8 @@
     </array>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Đính kèm ảnh hoá đơn vào giao dịch.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Mở khoá ứng dụng Psy bằng Face ID.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsLocalNetworking</key>
