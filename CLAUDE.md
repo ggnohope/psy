@@ -1,17 +1,22 @@
 # Psy — project context for Claude
 
-Cute money-tracker, **offline-first**. Monorepo: `android/` (Kotlin/Compose app) + `backend/` (Go + Postgres, đăng nhập Google + sao lưu/đồng bộ). Đọc file này đầu mỗi session; chi tiết sâu xem `docs/ARCHITECTURE.md`.
+Cute money-tracker, **offline-first**. Monorepo: `android/` (Kotlin/Compose) + `ios/` (Swift/SwiftUI) + `backend/` (Go + Postgres, đăng nhập Google + sao lưu/đồng bộ). Đọc file này đầu mỗi session; chi tiết sâu xem `docs/ARCHITECTURE.md`.
 
 > Quy ước trả lời: **song ngữ Việt–Anh**, giữ thuật ngữ tiếng Anh. **KHÔNG viết unit test mặc định** (tốn token) — verify bằng build + emulator; chỉ thêm test khi là regression guard cho bug thật.
+>
+> ⚠️ **Cross-platform rule (BẮT BUỘC):** Bất kỳ feature / behavior / fix nào được thêm hoặc đổi đều phải implement cho **CẢ hai client: Android (`android/`) VÀ iOS (`ios/`)** — giữ parity về UI/UX *và* business logic. Đừng coi 1 platform là xong; nếu chỉ kịp làm 1 bên thì nêu rõ phần còn thiếu cho bên kia. Logic dùng chung (tính toán stats/budget/calendar, format tiền, định dạng snapshot) phải khớp giữa `domain/`+ViewModels (Android) và `PsyCore` engines (iOS).
 
 ## Layout
 ```
 android/   Kotlin · Jetpack Compose (Material3) · MVVM · Hilt · Room · Retrofit
+ios/       Swift · SwiftUI · MVVM · SwiftData · Combine · Swift Charts · GoogleSignIn · XcodeGen
 backend/   Go · chi · pgxpool · Postgres · JWT
 design/    icon source artwork
-docs/      ARCHITECTURE.md, RUNNING.md, CICD.md, superpowers/specs (1 spec / feature)
+docs/      ARCHITECTURE.md, RUNNING.md, CICD.md, superpowers/specs (1 spec / feature) + plans
 ```
-Package Android: `com.psy`. Module Go: `github.com/hoalam/psy/backend`. Repo: `github.com/ggnohope/psy`.
+Package Android: `com.psy`. Bundle iOS: `com.hoalam.psy`. Module Go: `github.com/hoalam/psy/backend`. Repo: `github.com/ggnohope/psy`.
+
+**iOS** (`ios/`, min iOS 17): pure logic in `PsyCore` SwiftPM package (CLI-testable via `swift test`) — mirrors Android `domain/` (models, `Money`, stats/calendar/budget/home **engines** ported 1:1 from the ViewModels). App target = SwiftUI + SwiftData (`@Model` entities, explicit `Int64` ids), Combine repos (Flow analog via `DataChangeBus`), Keychain token, GoogleSignIn. `BASE_URL` via xcconfig (device→prod HTTPS, simulator→localhost). Build: `cd ios && xcodegen generate && xcodebuild -scheme Psy -destination 'platform=iOS Simulator,name=iPhone 17'`. Snapshot JSON is **byte-compatible** with Android (shared backup blob) — keep `SnapshotDTO` field names + null encoding in sync.
 
 ## Build / run nhanh
 - **Android CLI** cần JBR: `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` rồi `cd android && ./gradlew :app:assembleDebug`. (Mở Android Studio thì khỏi.)
