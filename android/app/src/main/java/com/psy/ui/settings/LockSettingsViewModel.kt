@@ -29,11 +29,9 @@ class LockSettingsViewModel @Inject constructor(
 
     val isBiometricAvailable: Boolean = BiometricAuthenticator.isAvailable(context)
 
-    // --- Set-PIN dialog state ---
+    // --- Set-PIN dialog state. The keypad screen drives the enter→confirm flow in local
+    // Compose state and persists via [trySavePin]; this flag only controls visibility. ---
     val setPinDialogOpen: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val pinEntry: MutableStateFlow<String> = MutableStateFlow("")
-    val pinConfirm: MutableStateFlow<String> = MutableStateFlow("")
-    val pinError: MutableStateFlow<String> = MutableStateFlow("")
 
     /** Called when the user toggles the app lock switch ON. */
     fun requestEnableLock() {
@@ -51,45 +49,29 @@ class LockSettingsViewModel @Inject constructor(
     }
 
     fun openSetPin() {
-        pinEntry.value = ""
-        pinConfirm.value = ""
-        pinError.value = ""
         setPinDialogOpen.value = true
     }
 
-    fun onPinEntryChange(s: String) {
-        // Accept only digits, max 6
-        val filtered = s.filter { it.isDigit() }.take(6)
-        pinEntry.value = filtered
+    /**
+     * Persist a confirmed 4-digit PIN and enable the lock. Called by the keypad-based
+     * set-PIN screen, which handles the enter→confirm two-stage flow in local Compose state.
+     * Returns true if the PIN was valid (4 digits) and saved.
+     */
+    fun trySavePin(pin: String): Boolean {
+        if (pin.length != 4) return false
+        savePin(pin)
+        return true
     }
 
-    fun onPinConfirmChange(s: String) {
-        val filtered = s.filter { it.isDigit() }.take(6)
-        pinConfirm.value = filtered
-    }
-
-    fun confirmSetPin() {
-        val entry = pinEntry.value
-        val confirm = pinConfirm.value
-        if (entry.length in 4..6 && entry == confirm) {
-            viewModelScope.launch {
-                settingsRepo.setPin(entry)
-                settingsRepo.setLockEnabled(true)
-            }
-            pinError.value = ""
-            setPinDialogOpen.value = false
-            pinEntry.value = ""
-            pinConfirm.value = ""
-        } else {
-            pinError.value = "PIN phải 4-6 số và khớp"
+    private fun savePin(pin: String) {
+        viewModelScope.launch {
+            settingsRepo.setPin(pin)
+            settingsRepo.setLockEnabled(true)
         }
     }
 
     fun closeSetPin() {
         setPinDialogOpen.value = false
-        pinEntry.value = ""
-        pinConfirm.value = ""
-        pinError.value = ""
     }
 
     fun setBiometricEnabled(enabled: Boolean) {
