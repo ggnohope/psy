@@ -6,7 +6,7 @@ struct RootView: View {
 
     var body: some View {
         TabView {
-            tabStub("Trang chủ")
+            HomeView(container: container)
                 .tabItem { Label("Trang chủ", systemImage: "house.fill") }
             tabStub("Thống kê")
                 .tabItem { Label("Thống kê", systemImage: "chart.bar.fill") }
