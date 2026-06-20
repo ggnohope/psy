@@ -7,6 +7,8 @@
 - Unified release on tag `v*`: build a signed Android APK **and** an ad-hoc-signed iOS IPA, both versioned from the tag, both attached to one GitHub Release.
 - One source of truth for the user-facing version: the git tag.
 
+> **Update (2026-06-20, free account):** không có Apple Developer paid → iOS không ký ad-hoc được. Job `ios` đổi sang build **IPA chưa ký** (không cần secret); cài qua SideStore/AltStore/Sideloadly (`docs/IOS-SIDELOAD.md`). Phần ad-hoc + secrets bên dưới giữ lại để tham khảo khi có paid (hoặc chuyển TestFlight). Versioning + unified `release.yml` không đổi.
+
 ## Decisions (from brainstorming)
 - iOS distribution: **ad-hoc IPA → GitHub Release** (paid Apple account; device UDIDs registered in the profile).
 - Versioning: **derive from git tag `v*`** for both platforms.

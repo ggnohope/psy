@@ -76,14 +76,16 @@ make dev          # khởi động Postgres (Docker) + chạy server tại :8080
 ```bash
 git tag v1.2.0 && git push origin v1.2.0
 ```
-→ workflow `release.yml` build **signed APK** (Android) + **ad-hoc IPA** (iOS), cùng `1.2.0 (build N)`, đính cả hai vào GitHub Release `v1.2.0`. Chi tiết + secrets: [docs/CICD.md](docs/CICD.md).
+→ workflow `release.yml` build **signed APK** (Android) + **unsigned IPA** (iOS), cùng `1.2.0 (build N)`, đính cả hai vào GitHub Release `v1.2.0`. Chi tiết: [docs/CICD.md](docs/CICD.md).
+
+**Cài iOS** (không cần Apple paid): tải `Psy-*-unsigned.ipa` từ Release rồi tự ký bằng Apple ID free qua **SideStore/AltStore/Sideloadly** — hướng dẫn: [docs/IOS-SIDELOAD.md](docs/IOS-SIDELOAD.md).
 
 Build local (không qua CI):
 ```bash
 cd android && ./gradlew :app:assembleRelease     # → app/build/outputs/apk/release/app-release.apk
-cd ios && xcodegen generate                       # rồi Archive trong Xcode cho iOS
+cd ios && xcodegen generate && open Psy.xcodeproj # rồi Run ▶ lên device (Personal Team, free)
 ```
-Cần: backend HTTPS đã host; Android đăng ký SHA-1 release keystore cho OAuth client (giữ kỹ `keystore.properties` + `psy-release.jks`, gitignored); iOS có cert Apple Distribution + ad-hoc profile cho `com.hoalam.psy`.
+Cần: backend HTTPS đã host; Android đăng ký SHA-1 release keystore cho OAuth client (giữ kỹ `keystore.properties` + `psy-release.jks`, gitignored).
 
 ## 🛠️ Tech stack
 

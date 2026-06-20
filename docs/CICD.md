@@ -6,7 +6,7 @@ GitHub Actions. 5 workflow trong `.github/workflows/`.
 |---|---|---|
 | `android-ci.yml` | push/PR đụng `android/**` | `assembleDebug` + `lintDebug` |
 | `ios-ci.yml` | push/PR đụng `ios/**` | `swift test` (PsyCore) + `xcodebuild test` (simulator) — runner **macOS** |
-| `release.yml` | tag `v*` | build **signed APK (Android)** + **ad-hoc IPA (iOS)**, cùng version từ tag → đính cả hai vào 1 GitHub Release |
+| `release.yml` | tag `v*` | build **signed APK (Android)** + **unsigned IPA (iOS, sideload)**, cùng version từ tag → đính cả hai vào 1 GitHub Release |
 | `backend-ci.yml` | push/PR đụng `backend/**` | `go vet` + `build` + `test` (Postgres service) |
 | `backend-deploy.yml` | push `main` đụng `backend/**` | build image → GHCR → SSH vào EC2 `pull && up -d` |
 
@@ -26,18 +26,9 @@ GitHub Actions. 5 workflow trong `.github/workflows/`.
 | `ANDROID_KEY_ALIAS` | `psy` |
 | `ANDROID_KEY_PASSWORD` | keyPassword |
 
-**iOS (ad-hoc signing — release.yml job `ios`):**
-| Secret | Giá trị |
-|---|---|
-| `IOS_DIST_CERT_P12_BASE64` | `base64 -i AppleDistribution.p12 \| pbcopy` (cert **Apple Distribution** export ra `.p12`) |
-| `IOS_DIST_CERT_PASSWORD` | mật khẩu của `.p12` |
-| `IOS_PROVISIONING_PROFILE_BASE64` | `base64 -i psy_adhoc.mobileprovision \| pbcopy` (profile **Ad Hoc** cho `com.hoalam.psy`) |
-| `IOS_TEAM_ID` | Apple Team ID (10 ký tự) |
-| `IOS_KEYCHAIN_PASSWORD` | chuỗi tạm bất kỳ (cho keychain tạm trên runner) |
+**iOS:** KHÔNG cần secret. Job `ios` build **IPA chưa ký** (không có Apple Developer paid). Người dùng tự ký bằng Apple ID free qua **SideStore / AltStore / Sideloadly** — xem `docs/IOS-SIDELOAD.md`.
 
-> **Chuẩn bị (làm 1 lần trong Apple Developer portal):** ① tạo/export cert **Apple Distribution** → `.p12`; ② tạo profile **Ad Hoc** cho App ID `com.hoalam.psy`, đăng ký **UDID** của các thiết bị test; ③ thêm 5 secret trên.
-> Giới hạn ad-hoc: thêm thiết bị mới ⇒ phải regenerate profile + cập nhật lại `IOS_PROVISIONING_PROFILE_BASE64`. (Muốn hết phiền → chuyển sang TestFlight sau.)
-> `ExportOptions.plist` dùng `method: release-testing` (Xcode 15.3+). Nếu runner xài Xcode cũ hơn, đổi thành `ad-hoc` trong `release.yml`.
+> Khi nào có Apple Developer paid muốn dùng **TestFlight** (cài qua link, 90 ngày, không cần UDID/máy tính): đổi job `ios` từ build-unsigned sang `xcodebuild archive` + export App Store + upload App Store Connect API key, rồi thêm secrets `APPSTORE_*`. Git history có sẵn phiên bản ad-hoc ký bằng cert để tham khảo.
 
 **Backend (deploy EC2):**
 | Secret | Giá trị |
@@ -95,9 +86,9 @@ Lần đầu kéo image (sau khi CI đã push): `docker compose -f docker-compos
   → `release.yml` chạy 1 run:
   - Version lấy từ tag: `VERSION_NAME = 1.2.0` (bỏ chữ `v`); build number = `github.run_number` (tăng dần).
   - Job `android`: APK đã ký `1.2.0 (build N)`.
-  - Job `ios`: ad-hoc IPA `1.2.0 (build N)`.
+  - Job `ios`: IPA **chưa ký** `1.2.0 (build N)` (`Psy-1.2.0-unsigned.ipa`).
   - Cả hai đính vào **một** GitHub Release `v1.2.0`. Hai bên **luôn cùng version + build**.
-  - Cài iOS IPA: thiết bị phải nằm trong UDID của provisioning profile (ad-hoc).
+  - Cài iOS: tải IPA → tự ký bằng Apple ID free qua SideStore/AltStore/Sideloadly. Xem `docs/IOS-SIDELOAD.md`.
 
   > Version trong code (`build.gradle.kts` = `1.0`, `project.yml` MARKETING_VERSION = `1.0.0`) chỉ là fallback cho build local; release luôn override từ tag.
 

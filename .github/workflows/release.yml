@@ -2,8 +2,10 @@ name: Release
 
 # One tag releases BOTH platforms with the same version + build number.
 #   git tag v1.2.0 && git push origin v1.2.0
-# -> Android signed APK + iOS ad-hoc IPA, both versioned 1.2.0 (build = run number),
+# -> Android signed APK + iOS UNSIGNED IPA, both versioned 1.2.0 (build = run number),
 #    attached to the GitHub Release "v1.2.0".
+# The iOS IPA is unsigned (no paid Apple account): install via SideStore / AltStore /
+# Sideloadly, which re-sign it with your own free Apple ID. See docs/IOS-SIDELOAD.md.
 
 on:
   push:
@@ -92,97 +94,43 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Import signing assets into a temp keychain
-        env:
-          CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
-          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
-          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
-        run: |
-          set -euo pipefail
-          CERT_PATH="$RUNNER_TEMP/dist.p12"
-          PROFILE_PATH="$RUNNER_TEMP/psy.mobileprovision"
-          KEYCHAIN="$RUNNER_TEMP/psy.keychain-db"
-          echo "$CERT_P12_BASE64" | base64 -d > "$CERT_PATH"
-          echo "$PROFILE_BASE64" | base64 -d > "$PROFILE_PATH"
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security set-keychain-settings -lut 3600 "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security import "$CERT_PATH" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
-          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
-
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | plutil -extract UUID raw -)
-          PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | plutil -extract Name raw -)
-          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
-          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
-          echo "KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
-
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
 
-      - name: Archive + export ad-hoc IPA (version from tag)
+      - name: Build unsigned IPA (version from tag)
         working-directory: ios
-        env:
-          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           BUILD="${{ github.run_number }}"
-          ARCHIVE="$RUNNER_TEMP/Psy.xcarchive"
-          EXPORT_DIR="$RUNNER_TEMP/export"
-          PLIST="$RUNNER_TEMP/ExportOptions.plist"
-          echo "Building iOS $VERSION (build $BUILD)"
+          echo "Building iOS $VERSION (build $BUILD) — unsigned (sideload)"
 
-          xcodebuild archive \
+          xcodebuild \
             -project Psy.xcodeproj \
             -scheme Psy \
             -configuration Release \
-            -archivePath "$ARCHIVE" \
-            -destination 'generic/platform=iOS' \
+            -sdk iphoneos \
+            -derivedDataPath build \
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="$BUILD" \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
-            CODE_SIGN_IDENTITY="Apple Distribution"
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
 
-          # ExportOptions.plist via PlistBuddy (avoids heredoc indentation pitfalls).
-          printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
-            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
-            '<plist version="1.0"><dict/></plist>' > "$PLIST"
-          PB=/usr/libexec/PlistBuddy
-          # "release-testing" is Xcode 15.3+ for ad-hoc; on older Xcode use "ad-hoc".
-          $PB -c "Add :method string release-testing" "$PLIST"
-          $PB -c "Add :teamID string $TEAM_ID" "$PLIST"
-          $PB -c "Add :signingStyle string manual" "$PLIST"
-          $PB -c "Add :signingCertificate string Apple Distribution" "$PLIST"
-          $PB -c "Add :provisioningProfiles dict" "$PLIST"
-          $PB -c "Add :provisioningProfiles:com.hoalam.psy string $PROFILE_NAME" "$PLIST"
-          $PB -c "Add :compileBitcode bool false" "$PLIST"
+          APP="build/Build/Products/Release-iphoneos/Psy.app"
+          # Package the unsigned .app into an .ipa (Payload/ then zip).
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          IPA="$RUNNER_TEMP/Psy-$VERSION-unsigned.ipa"
+          zip -qr "$IPA" Payload
+          echo "IPA_PATH=$IPA" >> "$GITHUB_ENV"
 
-          xcodebuild -exportArchive \
-            -archivePath "$ARCHIVE" \
-            -exportPath "$EXPORT_DIR" \
-            -exportOptionsPlist "$PLIST"
-
-          IPA=$(ls "$EXPORT_DIR"/*.ipa | head -1)
-          DEST="$RUNNER_TEMP/Psy-$VERSION.ipa"
-          cp "$IPA" "$DEST"
-          echo "IPA_PATH=$DEST" >> "$GITHUB_ENV"
-
-      - name: Publish IPA to Release
+      - name: Publish unsigned IPA to Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           files: ${{ env.IPA_PATH }}
           fail_on_unmatched_files: true
-
-      - name: Clean up keychain + profiles
-        if: always()
-        run: |
-          security delete-keychain "$KEYCHAIN" 2>/dev/null || true
-          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision || true
