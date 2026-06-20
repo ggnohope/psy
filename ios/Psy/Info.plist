@@ -39,5 +39,18 @@
         <key>NSAllowsLocalNetworking</key>
         <true/>
     </dict>
+    <key>GIDClientID</key>
+    <string>YOUR_IOS_CLIENT_ID.apps.googleusercontent.com</string>
+    <key>GIDServerClientID</key>
+    <string>885786271406-u79onredebj2udsoaen122vphe3pk8hd.apps.googleusercontent.com</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>

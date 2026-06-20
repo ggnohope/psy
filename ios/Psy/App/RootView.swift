@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     let container: AppContainer
+    let appVM: AppViewModel
 
     // Initial selected tab. Reads PSY_TAB (0 home, 1 stats, 2 calendar, 3 budget) once for
     // screenshot testability; defaults to Home.
@@ -12,7 +13,7 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            HomeView(container: container)
+            HomeView(container: container, appVM: appVM)
                 .tabItem { Label("Trang chủ", systemImage: "house.fill") }
                 .tag(0)
             StatsView(container: container)

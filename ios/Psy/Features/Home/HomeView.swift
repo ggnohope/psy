@@ -5,14 +5,16 @@ import PsyCore
 /// Canonical example of a ViewModel-backed feature screen.
 struct HomeView: View {
     let container: AppContainer
+    let appVM: AppViewModel
     @Environment(\.psyColors) private var psyColors
     @State private var vm: HomeViewModel
 
     @State private var showAdd = false
     @State private var editTxId: Int64?
 
-    init(container: AppContainer) {
+    init(container: AppContainer, appVM: AppViewModel) {
         self.container = container
+        self.appVM = appVM
         _vm = State(initialValue: HomeViewModel(container: container))
     }
 
@@ -46,17 +48,8 @@ struct HomeView: View {
                     .accessibilityLabel("Thêm giao dịch")
                 }
                 ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        NavigationLink {
-                            ManageAccountsView(container: container)
-                        } label: {
-                            Label("Quản lý tài khoản", systemImage: "creditcard")
-                        }
-                        NavigationLink {
-                            ManageCategoriesView(container: container)
-                        } label: {
-                            Label("Quản lý danh mục", systemImage: "square.grid.2x2")
-                        }
+                    NavigationLink {
+                        SettingsView(container: container, appVM: appVM)
                     } label: {
                         Image(systemName: "gearshape")
                     }
