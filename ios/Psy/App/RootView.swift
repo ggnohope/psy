@@ -16,7 +16,7 @@ struct RootView: View {
             HomeView(container: container)
                 .tabItem { Label("Trang chủ", systemImage: "house.fill") }
                 .tag(0)
-            tabStub("Thống kê")
+            StatsView(container: container)
                 .tabItem { Label("Thống kê", systemImage: "chart.bar.fill") }
                 .tag(1)
             CalendarView(container: container)

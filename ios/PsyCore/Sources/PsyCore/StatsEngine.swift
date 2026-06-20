@@ -5,6 +5,13 @@ public struct StatsSummary: Sendable {
     public let expenseMinor: Int64
     public let netMinor: Int64
     public let avgPerDayMinor: Int64
+
+    public init(incomeMinor: Int64, expenseMinor: Int64, netMinor: Int64, avgPerDayMinor: Int64) {
+        self.incomeMinor = incomeMinor
+        self.expenseMinor = expenseMinor
+        self.netMinor = netMinor
+        self.avgPerDayMinor = avgPerDayMinor
+    }
 }
 
 public struct TopEntry: Identifiable, Sendable {
