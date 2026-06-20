@@ -38,6 +38,10 @@ targets:
     platform: iOS
     sources:
       - PsyTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.psy.tests
     dependencies:
       - target: Psy
 schemes:
