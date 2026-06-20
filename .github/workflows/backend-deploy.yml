@@ -71,6 +71,15 @@ jobs:
             if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
               echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ggnohope --password-stdin
             fi
+
+            if [ ! -d ~/psy/.git ]; then
+              git clone https://github.com/ggnohope/psy.git ~/psy
+            else
+              cd ~/psy
+              git fetch origin main
+              git reset --hard origin/main
+            fi
+
             cd ~/psy/backend
             docker compose -f docker-compose.prod.yml pull server
             docker compose -f docker-compose.prod.yml up -d
