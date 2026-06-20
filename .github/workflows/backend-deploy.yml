@@ -72,7 +72,7 @@ jobs:
               echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ggnohope --password-stdin
             fi
 
-            if [ ! -d ~/psy/.git ]; then
+            if [ ! -d ~/psy ]; then
               git clone https://github.com/ggnohope/psy.git ~/psy
             else
               cd ~/psy
