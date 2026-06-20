@@ -30,6 +30,8 @@
     <array>
         <string>UIInterfaceOrientationPortrait</string>
     </array>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Đính kèm ảnh hoá đơn vào giao dịch.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsLocalNetworking</key>

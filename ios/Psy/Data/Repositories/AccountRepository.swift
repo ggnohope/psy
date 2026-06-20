@@ -19,6 +19,11 @@ final class AccountRepository {
         }.eraseToAnyPublisher()
     }
 
+    func all() -> [Account] {
+        let d = FetchDescriptor<AccountEntity>(sortBy: [SortDescriptor(\.id, order: .forward)])
+        return ((try? context.fetch(d)) ?? []).map { $0.toDomain() }
+    }
+
     func count() -> Int { (try? context.fetchCount(FetchDescriptor<AccountEntity>())) ?? 0 }
 
     @discardableResult

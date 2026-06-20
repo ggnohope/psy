@@ -29,6 +29,19 @@ final class CategoryRepository {
         }.eraseToAnyPublisher()
     }
 
+    func byType(_ type: CategoryType) -> [PsyCore.Category] {
+        let raw = type.rawValue
+        let d = FetchDescriptor<CategoryEntity>(
+            predicate: #Predicate { $0.type == raw },
+            sortBy: [SortDescriptor(\.sortOrder, order: .forward)])
+        return ((try? context.fetch(d)) ?? []).map { $0.toDomain() }
+    }
+
+    func all() -> [PsyCore.Category] {
+        let d = FetchDescriptor<CategoryEntity>(sortBy: [SortDescriptor(\.sortOrder, order: .forward)])
+        return ((try? context.fetch(d)) ?? []).map { $0.toDomain() }
+    }
+
     func count() -> Int { (try? context.fetchCount(FetchDescriptor<CategoryEntity>())) ?? 0 }
 
     @discardableResult
