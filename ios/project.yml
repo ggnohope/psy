@@ -28,7 +28,7 @@ targets:
       Release: Config/Release.xcconfig
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.psy
+        PRODUCT_BUNDLE_IDENTIFIER: com.hoalam.psy
         INFOPLIST_FILE: Psy/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -46,7 +46,7 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.psy.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.hoalam.psy.tests
     dependencies:
       - target: Psy
 schemes:
