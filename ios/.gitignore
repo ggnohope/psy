@@ -1,0 +1,5 @@
+Psy.xcodeproj/
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
