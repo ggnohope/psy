@@ -4,9 +4,9 @@ enum APIError: Error { case http(Int), noData }
 
 struct APIClient {
     let baseURL: URL
-    let tokenProvider: @Sendable () -> String?
+    let tokenProvider: () -> String?
 
-    init(baseURLString: String, tokenProvider: @escaping @Sendable () -> String?) {
+    init(baseURLString: String, tokenProvider: @escaping () -> String?) {
         self.baseURL = URL(string: baseURLString)!
         self.tokenProvider = tokenProvider
     }

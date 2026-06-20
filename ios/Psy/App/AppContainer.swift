@@ -19,6 +19,11 @@ final class AppContainer {
     let snapshotManager: SnapshotManager
     let seeder: DefaultDataSeeder
 
+    let tokenStore: TokenStore
+    let settingsStore: SettingsStore
+    let authRepo: AuthRepository
+    let backupRepo: BackupRepository
+
     init(inMemory: Bool = false) {
         modelContainer = ModelContainerFactory.make(inMemory: inMemory)
         context = modelContainer.mainContext
@@ -33,5 +38,13 @@ final class AppContainer {
 
         snapshotManager = SnapshotManager(context: context, bus: bus)
         seeder = DefaultDataSeeder(ledgerRepo: ledgerRepo, accountRepo: accountRepo, categoryRepo: categoryRepo)
+
+        tokenStore = TokenStore()
+        settingsStore = SettingsStore()
+        let apiClient = APIClient(baseURLString: BuildConfig.baseURL,
+                                  tokenProvider: { [tokenStore] in tokenStore.currentToken })
+        authRepo = AuthRepository(api: AuthAPI(client: apiClient), tokenStore: tokenStore)
+        backupRepo = BackupRepository(api: BackupAPI(client: apiClient), snapshot: snapshotManager,
+                                      tokenStore: tokenStore, seeder: seeder)
     }
 }
