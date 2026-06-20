@@ -16,7 +16,7 @@ final class AppViewModel {
 
     var settings: SettingsStore { container.settingsStore }
 
-    private var hasResolvedInitial = false
+    private var didEnterBackground = false
     private var lastBackgroundedAt: Int64 = 0
     private let skipAuth = ProcessInfo.processInfo.environment["PSY_SKIP_AUTH"] == "1"
 
@@ -31,6 +31,8 @@ final class AppViewModel {
                 .store(in: &cancellables)
         }
         if container.settingsStore.lockEnabled { isLocked = true }
+        // Debug/screenshot hook: force the lock screen (paired with PSY_SKIP_AUTH).
+        if ProcessInfo.processInfo.environment["PSY_PREVIEW_LOCK"] == "1" { isSignedIn = true; isLocked = true }
     }
 
     func signInGoogle() {
@@ -51,17 +53,21 @@ final class AppViewModel {
         }
     }
 
+    /// Re-lock ONLY when returning from a real background that lasted > 2s. The Face ID /
+    /// system prompt drives the app `.inactive` → `.active` WITHOUT a `.background`, so it must
+    /// not re-lock here — otherwise unlock → re-lock → re-prompt loops forever. The initial
+    /// lock on cold launch is set in `init()`. Mirrors Android, where the in-activity
+    /// BiometricPrompt never triggers ON_STOP (so no spurious re-lock).
     func onScenePhaseActive() {
+        defer { didEnterBackground = false }
+        guard settings.lockEnabled, didEnterBackground else { return }
         let now = Int64(Date().timeIntervalSince1970 * 1000)
-        if settings.lockEnabled {
-            let elapsed = now - lastBackgroundedAt
-            if !hasResolvedInitial || elapsed > 2000 { isLocked = true }
-        }
-        hasResolvedInitial = true
+        if now - lastBackgroundedAt > 2000 { isLocked = true }
     }
 
     func onScenePhaseBackground() {
         let now = Int64(Date().timeIntervalSince1970 * 1000)
+        didEnterBackground = true
         lastBackgroundedAt = now
         guard container.tokenStore.currentToken != nil else { return }
         let last = container.tokenStore.lastSyncAt ?? 0
