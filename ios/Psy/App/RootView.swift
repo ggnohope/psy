@@ -2,25 +2,29 @@ import SwiftUI
 
 struct RootView: View {
     let container: AppContainer
-    @Environment(\.psyColors) private var colors
+    let appVM: AppViewModel
+
+    // Initial selected tab. Reads PSY_TAB (0 home, 1 stats, 2 calendar, 3 budget) once for
+    // screenshot testability; defaults to Home.
+    @State private var selection: Int = {
+        if let raw = ProcessInfo.processInfo.environment["PSY_TAB"], let n = Int(raw) { return n }
+        return 0
+    }()
 
     var body: some View {
-        TabView {
-            tabStub("Trang chủ")
+        TabView(selection: $selection) {
+            HomeView(container: container, appVM: appVM)
                 .tabItem { Label("Trang chủ", systemImage: "house.fill") }
-            tabStub("Thống kê")
+                .tag(0)
+            StatsView(container: container)
                 .tabItem { Label("Thống kê", systemImage: "chart.bar.fill") }
-            tabStub("Lịch")
+                .tag(1)
+            CalendarView(container: container)
                 .tabItem { Label("Lịch", systemImage: "calendar") }
-            tabStub("Ngân sách")
+                .tag(2)
+            BudgetView(container: container)
                 .tabItem { Label("Ngân sách", systemImage: "banknote.fill") }
-        }
-    }
-
-    private func tabStub(_ title: String) -> some View {
-        ZStack {
-            colors.background.ignoresSafeArea()
-            Text(title).font(PsyFont.headlineMedium).foregroundStyle(colors.onSurface)
+                .tag(3)
         }
     }
 }

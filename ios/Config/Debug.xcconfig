@@ -1,2 +1,5 @@
-// Simulator reaches the host machine directly via localhost (unlike Android emulator's 10.0.2.2).
-BASE_URL = http:/$()/localhost:8080/
+// Default (real device): hit the deployed prod backend over HTTPS. On a physical device
+// "localhost" is the phone itself, not the Mac — so a device build must use the public URL.
+BASE_URL = https:/$()/psy-backend.duckdns.org/
+// Simulator only: reach the Mac's local `make dev` backend directly (unlike Android emulator's 10.0.2.2).
+BASE_URL[sdk=iphonesimulator*] = http:/$()/localhost:8080/
