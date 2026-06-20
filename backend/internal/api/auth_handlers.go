@@ -11,7 +11,7 @@ import (
 // handleGoogleLogin validates a Google ID token and returns a JWT.
 // Returns 503 when GOOGLE_CLIENT_ID is not configured.
 func (h *Handlers) handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
-	if h.cfg.GoogleClientID == "" {
+	if len(h.cfg.GoogleClientIDs) == 0 {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "google login not configured"})
 		return
 	}
@@ -22,7 +22,7 @@ func (h *Handlers) handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "idToken required"})
 		return
 	}
-	sub, email, err := auth.VerifyGoogleIDToken(r.Context(), req.IDToken, h.cfg.GoogleClientID)
+	sub, email, err := auth.VerifyGoogleIDToken(r.Context(), req.IDToken, h.cfg.GoogleClientIDs)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid google token: " + err.Error()})
 		return
