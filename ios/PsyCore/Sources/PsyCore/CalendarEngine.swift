@@ -16,8 +16,10 @@ public struct CalendarResult: Sendable {
 
 public enum CalendarEngine {
     public static func build(monthTransactions: [Transaction], month: PsyMonth, categories: [Category],
-                             accounts: [Account], selectedDay: Date?, calendar: Calendar, now: Date) -> CalendarResult {
+                             groups: [CategoryGroup], accounts: [Account], selectedDay: Date?,
+                             calendar: Calendar, now: Date) -> CalendarResult {
         let catMap = Dictionary(categories.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let groupMap = Dictionary(groups.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         let accMap = Dictionary(accounts.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         let today = calendar.startOfDay(for: now)
 
@@ -54,7 +56,7 @@ public enum CalendarEngine {
             let selDay = calendar.startOfDay(for: sel)
             dayRows = monthTransactions
                 .filter { calendar.startOfDay(for: Date(timeIntervalSince1970: Double($0.date) / 1000)) == selDay }
-                .map { TxRowBuilder.make($0, categories: catMap, accounts: accMap) }
+                .map { TxRowBuilder.make($0, categories: catMap, groups: groupMap, accounts: accMap, calendar: calendar) }
         }
         return CalendarResult(weeks: weeks, dayRows: dayRows)
     }

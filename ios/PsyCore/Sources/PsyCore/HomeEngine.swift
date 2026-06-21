@@ -8,9 +8,10 @@ public struct HomeResult: Sendable {
 }
 
 public enum HomeEngine {
-    public static func build(transactions: [Transaction], categories: [Category], accounts: [Account],
-                             calendar: Calendar, now: Date) -> HomeResult {
+    public static func build(transactions: [Transaction], categories: [Category], groups: [CategoryGroup],
+                             accounts: [Account], calendar: Calendar, now: Date) -> HomeResult {
         let catMap = Dictionary(categories.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let groupMap = Dictionary(groups.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         let accMap = Dictionary(accounts.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
         let today = calendar.startOfDay(for: now)
@@ -33,7 +34,7 @@ public enum HomeEngine {
 
         let days: [DayGroup] = sortedDays.map { day in
             let label: String = day == today ? "Hôm nay" : (day == yesterday ? "Hôm qua" : df.string(from: day))
-            let rows = buckets[day]!.map { TxRowBuilder.make($0, categories: catMap, accounts: accMap) }
+            let rows = buckets[day]!.map { TxRowBuilder.make($0, categories: catMap, groups: groupMap, accounts: accMap, calendar: calendar) }
             return DayGroup(dateLabel: label, items: rows)
         }
 

@@ -1,9 +1,10 @@
 package com.psy.domain.model
 
-data class Category(
+data class CategoryGroup(
     val id: Long = 0,
-    val groupId: Long,
     val name: String,
     val icon: String,
+    val color: Long, // ARGB packed
+    val type: CategoryType,
     val sortOrder: Int,
 )

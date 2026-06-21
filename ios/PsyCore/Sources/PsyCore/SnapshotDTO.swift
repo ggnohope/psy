@@ -6,14 +6,33 @@ public struct SnapshotDTO: Codable, Equatable, Sendable {
     public var version: Int
     public var ledgers: [LedgerDTO]
     public var accounts: [AccountDTO]
+    public var categoryGroups: [CategoryGroupDTO]
     public var categories: [CategoryDTO]
     public var transactions: [TransactionDTO]
     public var budgets: [BudgetDTO]
 
-    public init(version: Int = 1, ledgers: [LedgerDTO], accounts: [AccountDTO],
-                categories: [CategoryDTO], transactions: [TransactionDTO], budgets: [BudgetDTO]) {
+    public init(version: Int = 2, ledgers: [LedgerDTO], accounts: [AccountDTO],
+                categoryGroups: [CategoryGroupDTO] = [], categories: [CategoryDTO],
+                transactions: [TransactionDTO], budgets: [BudgetDTO]) {
         self.version = version; self.ledgers = ledgers; self.accounts = accounts
-        self.categories = categories; self.transactions = transactions; self.budgets = budgets
+        self.categoryGroups = categoryGroups; self.categories = categories
+        self.transactions = transactions; self.budgets = budgets
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case version, ledgers, accounts, categoryGroups, categories, transactions, budgets
+    }
+
+    // categoryGroups defaults to [] when decoding a legacy v1 blob that lacks the key.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version = try c.decode(Int.self, forKey: .version)
+        ledgers = try c.decode([LedgerDTO].self, forKey: .ledgers)
+        accounts = try c.decode([AccountDTO].self, forKey: .accounts)
+        categoryGroups = try c.decodeIfPresent([CategoryGroupDTO].self, forKey: .categoryGroups) ?? []
+        categories = try c.decode([CategoryDTO].self, forKey: .categories)
+        transactions = try c.decode([TransactionDTO].self, forKey: .transactions)
+        budgets = try c.decode([BudgetDTO].self, forKey: .budgets)
     }
 }
 
@@ -39,7 +58,7 @@ public struct AccountDTO: Codable, Equatable, Sendable {
     }
 }
 
-public struct CategoryDTO: Codable, Equatable, Sendable {
+public struct CategoryGroupDTO: Codable, Equatable, Sendable {
     public var id: Int64
     public var name: String
     public var icon: String
@@ -48,6 +67,18 @@ public struct CategoryDTO: Codable, Equatable, Sendable {
     public var sortOrder: Int
     public init(id: Int64, name: String, icon: String, color: Int64, type: String, sortOrder: Int) {
         self.id = id; self.name = name; self.icon = icon; self.color = color; self.type = type; self.sortOrder = sortOrder
+    }
+}
+
+/// LEAF DTO. Reshaped for the hierarchy migration: carries `groupId`, drops `color`/`type`.
+public struct CategoryDTO: Codable, Equatable, Sendable {
+    public var id: Int64
+    public var groupId: Int64
+    public var name: String
+    public var icon: String
+    public var sortOrder: Int
+    public init(id: Int64, groupId: Int64, name: String, icon: String, sortOrder: Int) {
+        self.id = id; self.groupId = groupId; self.name = name; self.icon = icon; self.sortOrder = sortOrder
     }
 }
 
@@ -95,23 +126,23 @@ public struct TransactionDTO: Codable, Equatable, Sendable {
     }
 }
 
-/// Has optional categoryId → custom encode emits explicit `null`.
+/// Has optional groupId → custom encode emits explicit `null` to match kotlinx.
 public struct BudgetDTO: Codable, Equatable, Sendable {
     public var id: Int64
     public var ledgerId: Int64
-    public var categoryId: Int64?
+    public var groupId: Int64?
     public var amountMinor: Int64
-    public init(id: Int64, ledgerId: Int64, categoryId: Int64?, amountMinor: Int64) {
-        self.id = id; self.ledgerId = ledgerId; self.categoryId = categoryId; self.amountMinor = amountMinor
+    public init(id: Int64, ledgerId: Int64, groupId: Int64?, amountMinor: Int64) {
+        self.id = id; self.ledgerId = ledgerId; self.groupId = groupId; self.amountMinor = amountMinor
     }
 
-    enum CodingKeys: String, CodingKey { case id, ledgerId, categoryId, amountMinor }
+    enum CodingKeys: String, CodingKey { case id, ledgerId, groupId, amountMinor }
 
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id)
         try c.encode(ledgerId, forKey: .ledgerId)
-        try c.encode(categoryId, forKey: .categoryId)        // explicit null when nil
+        try c.encode(groupId, forKey: .groupId)              // explicit null when nil
         try c.encode(amountMinor, forKey: .amountMinor)
     }
 }

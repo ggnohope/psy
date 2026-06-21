@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,13 +14,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,7 +59,8 @@ fun ManageCategoriesScreen(
     viewModel: ManageCategoriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val groupSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val leafSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Scaffold(
         topBar = {
@@ -75,8 +77,8 @@ fun ManageCategoriesScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = viewModel::startAdd) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Thêm danh mục")
+            FloatingActionButton(onClick = viewModel::startAddGroup) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Thêm nhóm")
             }
         },
     ) { paddingValues ->
@@ -94,8 +96,8 @@ fun ManageCategoriesScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
 
-            // ── Category list ─────────────────────────────────────────────
-            if (state.categories.isEmpty()) {
+            // ── Group + leaf tree ────────────────────────────────────────
+            if (state.groups.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -103,7 +105,7 @@ fun ManageCategoriesScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Chưa có danh mục nào.\nNhấn + để thêm mới.",
+                        text = "Chưa có nhóm nào.\nNhấn + để thêm nhóm mới.",
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -111,55 +113,111 @@ fun ManageCategoriesScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        horizontal = 16.dp,
-                        vertical = 8.dp,
-                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    items(state.categories, key = { it.id }) { category ->
-                        CategoryRow(
-                            category = category,
-                            onEdit = { viewModel.startEdit(category) },
-                            onDelete = { viewModel.requestDelete(category) },
-                        )
+                    state.groups.forEach { gwl ->
+                        item(key = "group-${gwl.group.id}") {
+                            GroupCard(
+                                gwl = gwl,
+                                onEditGroup = { viewModel.startEditGroup(gwl.group) },
+                                onDeleteGroup = { viewModel.requestDeleteGroup(gwl.group) },
+                                onAddLeaf = { viewModel.startAddLeaf(gwl.group.id) },
+                                onEditLeaf = { viewModel.startEditLeaf(it) },
+                                onDeleteLeaf = { viewModel.requestDeleteLeaf(it) },
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    // ── Editor ModalBottomSheet ───────────────────────────────────────────────
-    if (state.editorOpen) {
+    // ── Group editor ModalBottomSheet ─────────────────────────────────────────
+    if (state.groupEditorOpen) {
         ModalBottomSheet(
-            onDismissRequest = viewModel::closeEditor,
-            sheetState = sheetState,
+            onDismissRequest = viewModel::closeGroupEditor,
+            sheetState = groupSheetState,
         ) {
-            CategoryEditor(
+            GroupEditor(
                 state = state,
-                onNameChange = viewModel::onNameChange,
-                onIconChange = viewModel::onIconChange,
-                onColorChange = viewModel::onColorChange,
-                onSave = viewModel::saveEditor,
-                onCancel = viewModel::closeEditor,
+                onNameChange = viewModel::onGroupNameChange,
+                onIconChange = viewModel::onGroupIconChange,
+                onColorChange = viewModel::onGroupColorChange,
+                onSave = viewModel::saveGroup,
+                onCancel = viewModel::closeGroupEditor,
             )
         }
     }
 
-    // ── Delete confirmation AlertDialog ───────────────────────────────────────
-    state.pendingDelete?.let { cat ->
+    // ── Leaf editor ModalBottomSheet ──────────────────────────────────────────
+    if (state.leafEditorOpen) {
+        ModalBottomSheet(
+            onDismissRequest = viewModel::closeLeafEditor,
+            sheetState = leafSheetState,
+        ) {
+            LeafEditor(
+                state = state,
+                onNameChange = viewModel::onLeafNameChange,
+                onIconChange = viewModel::onLeafIconChange,
+                onSave = viewModel::saveLeaf,
+                onCancel = viewModel::closeLeafEditor,
+            )
+        }
+    }
+
+    // ── Delete leaf confirmation ──────────────────────────────────────────────
+    state.pendingDeleteLeaf?.let { leaf ->
         AlertDialog(
-            onDismissRequest = viewModel::cancelDelete,
-            title = { Text("Xoá danh mục") },
-            text = { Text("Xoá danh mục «${cat.name}»?") },
+            onDismissRequest = viewModel::cancelDeleteLeaf,
+            title = { Text("Xoá mục") },
+            text = { Text("Xoá mục «${leaf.name}»?") },
             confirmButton = {
-                TextButton(onClick = viewModel::confirmDelete) {
+                TextButton(onClick = viewModel::confirmDeleteLeaf) {
                     Text("Xoá", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::cancelDelete) {
+                TextButton(onClick = viewModel::cancelDeleteLeaf) {
                     Text("Huỷ")
+                }
+            },
+        )
+    }
+
+    // ── Delete group confirmation (cascade warning) ───────────────────────────
+    state.pendingDeleteGroup?.let { group ->
+        AlertDialog(
+            onDismissRequest = viewModel::cancelDeleteGroup,
+            title = { Text("Xoá nhóm") },
+            text = {
+                Text(
+                    "Xoá nhóm «${group.name}» và tất cả mục con của nó? " +
+                        "Các giao dịch cũ thuộc nhóm này sẽ mất danh mục.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmDeleteGroup) {
+                    Text("Xoá", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::cancelDeleteGroup) {
+                    Text("Huỷ")
+                }
+            },
+        )
+    }
+
+    // ── Message dialog (e.g. last-leaf guard) ─────────────────────────────────
+    state.message?.let { msg ->
+        AlertDialog(
+            onDismissRequest = viewModel::clearMessage,
+            title = { Text("Thông báo") },
+            text = { Text(msg) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearMessage) {
+                    Text("OK")
                 }
             },
         )
@@ -209,50 +267,138 @@ private fun TabToggle(
 }
 
 @Composable
-private fun CategoryRow(
-    category: Category,
+private fun GroupCard(
+    gwl: GroupWithLeaves,
+    onEditGroup: () -> Unit,
+    onDeleteGroup: () -> Unit,
+    onAddLeaf: () -> Unit,
+    onEditLeaf: (Category) -> Unit,
+    onDeleteLeaf: (Category) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val group = gwl.group
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(vertical = 8.dp),
+    ) {
+        // ── Group header row ──
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onEditGroup)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            // Emoji in tinted circle with color dot overlay
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(group.color).copy(alpha = 0.25f)),
+            ) {
+                Text(text = group.icon, fontSize = 20.sp)
+            }
+            Spacer(modifier = Modifier.size(12.dp))
+            // Color dot
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(Color(group.color)),
+            )
+            Text(
+                text = group.name,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            IconButton(onClick = onEditGroup) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Sửa nhóm",
+                )
+            }
+            IconButton(onClick = onDeleteGroup) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Xoá nhóm",
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+
+        // ── Leaves ──
+        gwl.leaves.forEach { leaf ->
+            LeafRow(
+                leaf = leaf,
+                onEdit = { onEditLeaf(leaf) },
+                onDelete = { onDeleteLeaf(leaf) },
+            )
+        }
+
+        // ── Add leaf action ──
+        TextButton(
+            onClick = onAddLeaf,
+            modifier = Modifier.padding(start = 44.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.size(4.dp))
+            Text("mục")
+        }
+    }
+}
+
+@Composable
+private fun LeafRow(
+    leaf: Category,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .clickable(onClick = onEdit)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(start = 44.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
     ) {
-        // Emoji in tinted circle
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(category.color).copy(alpha = 0.25f)),
-        ) {
-            Text(text = category.icon, fontSize = 20.sp)
-        }
+        Text(text = leaf.icon, fontSize = 18.sp)
         Text(
-            text = category.name,
+            text = leaf.name,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp),
             style = MaterialTheme.typography.bodyLarge,
         )
-        IconButton(onClick = onDelete) {
+        IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Sửa mục",
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
             Icon(
                 imageVector = Icons.Default.Delete,
-                contentDescription = "Xoá",
+                contentDescription = "Xoá mục",
                 tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(18.dp),
             )
         }
     }
 }
 
 @Composable
-private fun CategoryEditor(
+private fun GroupEditor(
     state: ManageCategoriesUiState,
     onNameChange: (String) -> Unit,
     onIconChange: (String) -> Unit,
@@ -268,28 +414,28 @@ private fun CategoryEditor(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = if (state.editingId == null) "Thêm danh mục" else "Sửa danh mục",
+            text = if (state.editingGroupId == null) "Thêm nhóm" else "Sửa nhóm",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
         )
 
         OutlinedTextField(
-            value = state.draftName,
+            value = state.groupDraftName,
             onValueChange = onNameChange,
-            label = { Text("Tên danh mục") },
+            label = { Text("Tên nhóm") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
 
         Text(text = "Biểu tượng", style = MaterialTheme.typography.labelLarge)
         EmojiPicker(
-            selected = state.draftIcon,
+            selected = state.groupDraftIcon,
             onPick = onIconChange,
         )
 
         Text(text = "Màu sắc", style = MaterialTheme.typography.labelLarge)
         ColorPicker(
-            selected = state.draftColor,
+            selected = state.groupDraftColor,
             onPick = onColorChange,
         )
 
@@ -299,15 +445,67 @@ private fun CategoryEditor(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            TextButton(
-                onClick = onCancel,
-                modifier = Modifier.weight(1f),
-            ) {
+            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
                 Text("Huỷ")
             }
             Button(
                 onClick = onSave,
-                enabled = state.draftName.isNotBlank(),
+                enabled = state.groupDraftName.isNotBlank(),
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Lưu")
+            }
+        }
+    }
+}
+
+@Composable
+private fun LeafEditor(
+    state: ManageCategoriesUiState,
+    onNameChange: (String) -> Unit,
+    onIconChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            text = if (state.editingLeafId == null) "Thêm mục" else "Sửa mục",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+
+        OutlinedTextField(
+            value = state.leafDraftName,
+            onValueChange = onNameChange,
+            label = { Text("Tên mục") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Text(text = "Biểu tượng", style = MaterialTheme.typography.labelLarge)
+        EmojiPicker(
+            selected = state.leafDraftIcon,
+            onPick = onIconChange,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+                Text("Huỷ")
+            }
+            Button(
+                onClick = onSave,
+                enabled = state.leafDraftName.isNotBlank(),
                 modifier = Modifier.weight(1f),
             ) {
                 Text("Lưu")

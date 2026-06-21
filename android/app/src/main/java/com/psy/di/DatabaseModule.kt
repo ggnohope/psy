@@ -6,6 +6,7 @@ import com.psy.data.db.PsyDatabase
 import com.psy.data.db.dao.AccountDao
 import com.psy.data.db.dao.BudgetDao
 import com.psy.data.db.dao.CategoryDao
+import com.psy.data.db.dao.CategoryGroupDao
 import com.psy.data.db.dao.LedgerDao
 import com.psy.data.db.dao.TransactionDao
 import dagger.Module
@@ -30,6 +31,7 @@ object DatabaseModule {
 
     @Provides fun provideLedgerDao(db: PsyDatabase): LedgerDao = db.ledgerDao()
     @Provides fun provideAccountDao(db: PsyDatabase): AccountDao = db.accountDao()
+    @Provides fun provideCategoryGroupDao(db: PsyDatabase): CategoryGroupDao = db.categoryGroupDao()
     @Provides fun provideCategoryDao(db: PsyDatabase): CategoryDao = db.categoryDao()
     @Provides fun provideTransactionDao(db: PsyDatabase): TransactionDao = db.transactionDao()
     @Provides fun provideBudgetDao(db: PsyDatabase): BudgetDao = db.budgetDao()

@@ -26,6 +26,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -178,11 +180,17 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
+                // Track which groups are expanded to reveal their leaf breakdown.
+                val expanded = remember { mutableStateMapOf<Long, Boolean>() }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    state.top.forEach { entry ->
-                        TopEntryRow(
-                            entry = entry,
+                    state.top.forEach { group ->
+                        TopGroupRow(
+                            group = group,
                             currency = state.currency,
+                            expanded = expanded[group.groupId] == true,
+                            onToggle = {
+                                expanded[group.groupId] = expanded[group.groupId] != true
+                            },
                         )
                     }
                 }
@@ -552,43 +560,66 @@ private fun LegendDot(color: Color) {
 }
 
 @Composable
-private fun TopEntryRow(
-    entry: TopEntry,
+private fun TopGroupRow(
+    group: TopGroup,
     currency: Currency,
+    expanded: Boolean,
+    onToggle: () -> Unit,
 ) {
+    val groupColor = Color(group.color)
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onToggle)
+            .padding(vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Category icon + name
+            // Colored dot matching the pie slice color.
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(groupColor),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            // Group icon + name (bold)
             Text(
-                text = "${entry.category.icon} ${entry.category.name}",
+                text = "${group.icon} ${group.name}",
                 style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
             )
-            // Amount + percent
+            // Amount
             Text(
                 text = Money.formatMinor(
-                    entry.amountMinor,
+                    group.amountMinor,
                     currency.fractionDigits,
                     currency.symbol,
                 ),
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            // Percent of total + count
+            Text(
+                text = "(${(group.percentOfTotal * 100).toInt()}% · ${group.count})",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = "(${(entry.percent * 100).toInt()}%)",
+                text = if (expanded) "▾" else "▸",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        // Proportion bar
+        // Group proportion bar (of total)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -598,10 +629,83 @@ private fun TopEntryRow(
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(fraction = entry.percent.coerceIn(0f, 1f))
+                    .fillMaxWidth(fraction = group.percentOfTotal.coerceIn(0f, 1f))
                     .height(8.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(Color(entry.category.color)),
+                    .background(groupColor),
+            )
+        }
+
+        // Leaf breakdown when expanded.
+        if (expanded) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, top = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                group.children.forEach { leaf ->
+                    TopLeafRow(
+                        leaf = leaf,
+                        currency = currency,
+                        // Lighter shade of the group color for child bars.
+                        barColor = groupColor.copy(alpha = 0.45f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopLeafRow(
+    leaf: TopLeaf,
+    currency: Currency,
+    barColor: Color,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "${leaf.icon} ${leaf.name}",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = Money.formatMinor(
+                    leaf.amountMinor,
+                    currency.fractionDigits,
+                    currency.symbol,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "(${(leaf.percentInGroup * 100).toInt()}%)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        // Leaf proportion bar (within its group)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction = leaf.percentInGroup.coerceIn(0f, 1f))
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(barColor),
             )
         }
     }

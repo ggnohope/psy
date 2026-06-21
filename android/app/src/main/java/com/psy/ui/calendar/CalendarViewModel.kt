@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.psy.domain.model.Currency
 import com.psy.domain.model.TxType
 import com.psy.domain.repository.AccountRepository
+import com.psy.domain.repository.CategoryGroupRepository
 import com.psy.domain.repository.CategoryRepository
 import com.psy.domain.repository.LedgerRepository
 import com.psy.domain.repository.TransactionRepository
@@ -21,6 +22,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 // ---------------------------------------------------------------------------
@@ -38,6 +40,10 @@ data class CalendarTxRow(
     val id: Long,
     val categoryName: String,
     val categoryIcon: String,
+    /** Parent group name of the leaf category; empty for TRANSFER. */
+    val groupName: String = "",
+    /** Transaction time-of-day formatted as HH:mm. */
+    val timeLabel: String = "",
     val accountName: String,
     val toAccountName: String? = null,
     val type: TxType,
@@ -64,8 +70,11 @@ class CalendarViewModel @Inject constructor(
     private val ledgerRepo: LedgerRepository,
     private val transactionRepo: TransactionRepository,
     private val categoryRepo: CategoryRepository,
+    private val groupRepo: CategoryGroupRepository,
     private val accountRepo: AccountRepository,
 ) : ViewModel() {
+
+    private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     val selectedMonth: MutableStateFlow<YearMonth> = MutableStateFlow(YearMonth.now())
     val selectedDay: MutableStateFlow<LocalDate?> = MutableStateFlow(null)
@@ -100,10 +109,12 @@ class CalendarViewModel @Inject constructor(
                 combine(
                     transactionRepo.observeBetween(ledger.id, monthStart, monthEnd),
                     categoryRepo.observeAll(),
+                    groupRepo.observeAll(),
                     accountRepo.observeAll(),
                     selectedDay,
-                ) { transactions, categories, accounts, selDay ->
+                ) { transactions, categories, groups, accounts, selDay ->
                     val categoryMap = categories.associateBy { it.id }
+                    val groupMap = groups.associateBy { it.id }
                     val accountMap = accounts.associateBy { it.id }
                     val today = LocalDate.now(zone)
 
@@ -157,14 +168,20 @@ class CalendarViewModel @Inject constructor(
                                 Instant.ofEpochMilli(tx.date).atZone(zone).toLocalDate() == selDay
                             }
                             .map { tx ->
-                                val cat = tx.categoryId?.let { categoryMap[it] }
+                                val leaf = tx.categoryId?.let { categoryMap[it] }
+                                val group = leaf?.let { groupMap[it.groupId] }
                                 val acc = accountMap[tx.accountId]
+                                val timeLabel = Instant.ofEpochMilli(tx.date)
+                                    .atZone(zone)
+                                    .format(timeFormatter)
                                 if (tx.type == TxType.TRANSFER) {
                                     val toAcc = tx.toAccountId?.let { accountMap[it] }
                                     CalendarTxRow(
                                         id = tx.id,
                                         categoryName = acc?.name ?: "—",
                                         categoryIcon = "🔄",
+                                        groupName = "",
+                                        timeLabel = timeLabel,
                                         accountName = acc?.name ?: "—",
                                         toAccountName = toAcc?.name ?: "—",
                                         type = tx.type,
@@ -175,8 +192,10 @@ class CalendarViewModel @Inject constructor(
                                 } else {
                                     CalendarTxRow(
                                         id = tx.id,
-                                        categoryName = cat?.name ?: "—",
-                                        categoryIcon = cat?.icon ?: "📦",
+                                        categoryName = leaf?.name ?: "—",
+                                        categoryIcon = leaf?.icon ?: "📦",
+                                        groupName = group?.name ?: "",
+                                        timeLabel = timeLabel,
                                         accountName = acc?.name ?: "—",
                                         toAccountName = null,
                                         type = tx.type,

@@ -9,6 +9,10 @@ object Routes {
     const val ADD_EDIT_PATTERN = "addEdit?txId={txId}"
     const val ARG_TX_ID = "txId"
 
+    // Read-only transaction detail screen.
+    const val DETAIL_PATTERN = "detail?txId={txId}"
+    fun detail(txId: Long): String = "detail?txId=$txId"
+
     const val BUDGET = "budget"
 
     const val SETTINGS = "settings"

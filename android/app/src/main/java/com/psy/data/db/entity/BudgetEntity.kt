@@ -8,6 +8,6 @@ import androidx.room.PrimaryKey
 data class BudgetEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val ledgerId: Long,
-    val categoryId: Long?,   // null = total budget
+    val groupId: Long?,   // null = total budget; otherwise references a CategoryGroup
     val amountMinor: Long,
 )
