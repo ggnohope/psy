@@ -1,4 +1,12 @@
+import Foundation
+
 public enum AddEditLogic {
+    /// Default date for a new transaction = NOW as a full epoch-millis timestamp (not midnight).
+    /// Mirrors Android `nowEpochMillis()` prefill so the logged time-of-day is preserved.
+    public static func defaultDate(now: Date) -> Int64 {
+        Int64((now.timeIntervalSince1970 * 1000).rounded())
+    }
+
     /// amountMinor = (typed integer) * 10^fractionDigits. Non-digits ignored.
     public static func amountMinor(typed: String, fractionDigits: Int) -> Int64 {
         let digits = typed.filter(\.isNumber)

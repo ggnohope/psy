@@ -14,13 +14,6 @@ public struct StatsSummary: Sendable {
     }
 }
 
-public struct TopEntry: Identifiable, Sendable {
-    public var id: Int64 { category.id }
-    public let category: Category
-    public let amountMinor: Int64
-    public let percent: Double
-}
-
 public struct AccountStat: Identifiable, Sendable {
     public let id: Int64
     public let name: String
@@ -35,7 +28,7 @@ public struct StatsResult: Sendable {
     public let summary: StatsSummary
     public let pieMode: TxType
     public let slices: [PieSlice]
-    public let top: [TopEntry]
+    public let top: [TopGroup]
     public let trend: [MonthBars]
     public let accountBreakdown: [AccountStat]
     public let selectedAccountId: Int64?
@@ -48,10 +41,11 @@ public enum StatsEngine {
         0xFFFFB86B, 0xFF6BCB77, 0xFF4D96FF, 0xFFFF6B6B, 0xFFB088F9,
     ]
 
-    public static func build(windowTransactions: [Transaction], categories: [Category], accounts: [Account],
-                             month: PsyMonth, pieMode: TxType, accountFilter: Int64?,
+    public static func build(windowTransactions: [Transaction], categories: [Category], groups: [CategoryGroup],
+                             accounts: [Account], month: PsyMonth, pieMode: TxType, accountFilter: Int64?,
                              calendar: Calendar, now: Date) -> StatsResult {
         let catMap = Dictionary(categories.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let groupMap = Dictionary(groups.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         let accMap = Dictionary(accounts.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
         let monthStart = month.startMillis(calendar)
@@ -92,26 +86,54 @@ public enum StatsEngine {
         let daysToCount = (month == currentYM) ? todayDay : month.lengthOfMonth(calendar)
         let avgPerDay = expense / Int64(max(1, daysToCount))
 
-        // ── Pie slices (by index palette) ──
+        // ── Pie slices + top groups (2-level) ──
+        // Mirrors StatsViewModel: aggregate by GROUP, slice color by palette index,
+        // top list = group entries with expandable leaf children.
         let pieTxns = monthTxns.filter { $0.type == pieMode && $0.categoryId != nil }
-        var pieByCategory: [Int64: Int64] = [:]
-        for tx in pieTxns { pieByCategory[tx.categoryId!, default: 0] += tx.amountMinor }
 
-        let sortedPie = pieByCategory.compactMap { catId, amount -> (name: String, amount: Int64)? in
-            guard let cat = catMap[catId] else { return nil }
-            return (cat.name, amount)
-        }.sorted { $0.amount > $1.amount }
-        let slices = sortedPie.enumerated().map { i, e in
-            PieSlice(name: e.name, amountMinor: e.amount, color: piePalette[i % piePalette.count])
+        // groupId → (leafId → [amounts]); skip txns whose leaf is gone.
+        var byGroup: [Int64: [Int64: [Int64]]] = [:]
+        for tx in pieTxns {
+            guard let leaf = catMap[tx.categoryId!] else { continue }
+            byGroup[leaf.groupId, default: [:]][leaf.id, default: []].append(tx.amountMinor)
         }
 
-        // ── Top entries ──
-        let pieTotal = slices.reduce(Int64(0)) { $0 + $1.amountMinor }
-        let top = pieByCategory.compactMap { catId, amount -> TopEntry? in
-            guard let cat = catMap[catId] else { return nil }
-            let pct = pieTotal > 0 ? Double(amount) / Double(pieTotal) : 0
-            return TopEntry(category: cat, amountMinor: amount, percent: pct)
-        }.sorted { $0.amountMinor > $1.amountMinor }.prefix(10).map { $0 }
+        // Group totals, sorted desc → drives both pie slices and the top list, so the
+        // palette index (=> color) matches between pie and list rows. Drop groups whose
+        // CategoryGroup no longer exists.
+        struct GroupAgg { let groupId: Int64; let amount: Int64; let leaves: [Int64: [Int64]] }
+        let sortedGroups: [GroupAgg] = byGroup.compactMap { gid, leafMap in
+            guard groupMap[gid] != nil else { return nil }
+            let amount = leafMap.values.reduce(Int64(0)) { $0 + $1.reduce(0, +) }
+            return GroupAgg(groupId: gid, amount: amount, leaves: leafMap)
+        }.sorted { $0.amount > $1.amount }
+
+        let pieTotal = sortedGroups.reduce(Int64(0)) { $0 + $1.amount }
+
+        let slices = sortedGroups.enumerated().compactMap { i, agg -> PieSlice? in
+            guard let group = groupMap[agg.groupId] else { return nil }
+            return PieSlice(name: group.name, amountMinor: agg.amount, color: piePalette[i % piePalette.count])
+        }
+
+        let top: [TopGroup] = sortedGroups.enumerated().compactMap { i, agg in
+            guard let group = groupMap[agg.groupId] else { return nil }
+            let color = piePalette[i % piePalette.count]
+            let groupAmount = agg.amount
+            let groupCount = agg.leaves.values.reduce(0) { $0 + $1.count }
+            let children: [TopLeaf] = agg.leaves.compactMap { leafId, amounts in
+                guard let leaf = catMap[leafId] else { return nil }
+                let leafAmount = amounts.reduce(0, +)
+                return TopLeaf(
+                    name: leaf.name, icon: leaf.icon, amountMinor: leafAmount,
+                    percentInGroup: groupAmount > 0 ? Double(leafAmount) / Double(groupAmount) : 0,
+                    count: amounts.count)
+            }.sorted { $0.amountMinor > $1.amountMinor }
+            return TopGroup(
+                groupId: agg.groupId, name: group.name, icon: group.icon, color: color,
+                amountMinor: groupAmount,
+                percentOfTotal: pieTotal > 0 ? Double(groupAmount) / Double(pieTotal) : 0,
+                count: groupCount, children: children)
+        }
 
         // ── Trend (6 months) ──
         let trend: [MonthBars] = (0...5).reversed().map { offset in
