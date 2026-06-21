@@ -7,11 +7,13 @@ import androidx.lifecycle.viewModelScope
 import com.psy.data.photo.PhotoStorage
 import com.psy.domain.model.Account
 import com.psy.domain.model.Category
+import com.psy.domain.model.CategoryGroup
 import com.psy.domain.model.CategoryType
 import com.psy.domain.model.Currency
 import com.psy.domain.model.Transaction
 import com.psy.domain.model.TxType
 import com.psy.domain.repository.AccountRepository
+import com.psy.domain.repository.CategoryGroupRepository
 import com.psy.domain.repository.CategoryRepository
 import com.psy.domain.repository.LedgerRepository
 import com.psy.domain.repository.TransactionRepository
@@ -25,7 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
 
@@ -47,8 +49,14 @@ data class AddEditUiState(
      * - Empty or zero amountText → canSave = false.
      */
     val amountText: String = "",
-    val categories: List<Category> = emptyList(),
+    /** Parent groups for the current type (empty for TRANSFER). */
+    val groups: List<CategoryGroup> = emptyList(),
+    /** Leaf categories of the currently selected group. */
+    val leaves: List<Category> = emptyList(),
     val accounts: List<Account> = emptyList(),
+    /** Currently selected parent group id; null for TRANSFER or when no groups. */
+    val selectedGroupId: Long? = null,
+    /** Currently selected LEAF category id. */
     val selectedCategoryId: Long? = null,
     val selectedAccountId: Long? = null,
     /** Destination account for TRANSFER type; null for INCOME/EXPENSE. */
@@ -71,6 +79,7 @@ data class AddEditUiState(
 class AddEditTransactionViewModel @Inject constructor(
     private val txRepo: TransactionRepository,
     private val categoryRepo: CategoryRepository,
+    private val groupRepo: CategoryGroupRepository,
     private val accountRepo: AccountRepository,
     private val ledgerRepo: LedgerRepository,
     private val photoStorage: PhotoStorage,
@@ -110,7 +119,7 @@ class AddEditTransactionViewModel @Inject constructor(
             var prefillCategoryId: Long? = null
             var prefillAccountId = defaultAccountId
             var prefillToAccountId: Long? = null
-            var prefillDate = todayEpochMillis()
+            var prefillDate = nowEpochMillis()
             var prefillNote = ""
             var prefillPhotoUri: String? = null
 
@@ -137,14 +146,30 @@ class AddEditTransactionViewModel @Inject constructor(
                     originalCreatedAt = tx.createdAt
                 }
             } else {
-                prefillDate = todayEpochMillis()
+                prefillDate = nowEpochMillis()
             }
 
-            // 4. Load initial categories for the chosen type (empty list for TRANSFER).
-            val categories = if (initialType == TxType.TRANSFER) {
-                emptyList()
-            } else {
-                categoryRepo.observeByType(initialType.toCategoryType()).first()
+            // 4. Load groups + leaves for the chosen type (empty for TRANSFER).
+            var groups: List<CategoryGroup> = emptyList()
+            var leaves: List<Category> = emptyList()
+            var selectedGroupId: Long? = null
+            if (initialType != TxType.TRANSFER) {
+                groups = groupRepo.observeByType(initialType.toCategoryType()).first()
+                if (isEdit && prefillCategoryId != null) {
+                    // Find the leaf's parent group so the picker shows the right selection.
+                    val allLeaves = categoryRepo.observeAll().first()
+                    val leaf = allLeaves.firstOrNull { it.id == prefillCategoryId }
+                    selectedGroupId = leaf?.groupId ?: groups.firstOrNull()?.id
+                } else {
+                    selectedGroupId = groups.firstOrNull()?.id
+                }
+                if (selectedGroupId != null) {
+                    leaves = categoryRepo.observeByGroup(selectedGroupId).first()
+                }
+                // For NEW transactions, default-select the first leaf of the group.
+                if (!isEdit) {
+                    prefillCategoryId = leaves.firstOrNull()?.id
+                }
             }
 
             val canSave = computeCanSave(
@@ -160,8 +185,10 @@ class AddEditTransactionViewModel @Inject constructor(
                     isEdit = isEdit,
                     type = initialType,
                     amountText = prefillAmountText,
-                    categories = categories,
+                    groups = groups,
+                    leaves = leaves,
                     accounts = accounts,
+                    selectedGroupId = selectedGroupId,
                     selectedCategoryId = prefillCategoryId,
                     selectedAccountId = prefillAccountId,
                     toAccountId = prefillToAccountId,
@@ -182,11 +209,13 @@ class AddEditTransactionViewModel @Inject constructor(
     fun onTypeChange(newType: TxType) {
         viewModelScope.launch {
             if (newType == TxType.TRANSFER) {
-                // TRANSFER: clear category; keep accounts; no categories needed.
+                // TRANSFER: clear category; keep accounts; no groups/leaves needed.
                 _uiState.update { state ->
                     state.copy(
                         type = TxType.TRANSFER,
-                        categories = emptyList(),
+                        groups = emptyList(),
+                        leaves = emptyList(),
+                        selectedGroupId = null,
                         selectedCategoryId = null,
                         // toAccountId stays null until user picks; from account keeps default.
                         canSave = computeCanSave(
@@ -199,14 +228,21 @@ class AddEditTransactionViewModel @Inject constructor(
                     )
                 }
             } else {
-                // INCOME or EXPENSE: reload categories, clear toAccountId.
-                val categories = categoryRepo.observeByType(newType.toCategoryType()).first()
-                val currentCategoryId = _uiState.value.selectedCategoryId
-                val newCategoryId = if (categories.any { it.id == currentCategoryId }) currentCategoryId else null
+                // INCOME or EXPENSE: reload groups → first group's leaves; clear toAccountId.
+                val groups = groupRepo.observeByType(newType.toCategoryType()).first()
+                val selectedGroupId = groups.firstOrNull()?.id
+                val leaves = if (selectedGroupId != null) {
+                    categoryRepo.observeByGroup(selectedGroupId).first()
+                } else {
+                    emptyList()
+                }
+                val newCategoryId = leaves.firstOrNull()?.id
                 _uiState.update { state ->
                     state.copy(
                         type = newType,
-                        categories = categories,
+                        groups = groups,
+                        leaves = leaves,
+                        selectedGroupId = selectedGroupId,
                         selectedCategoryId = newCategoryId,
                         toAccountId = null,
                         canSave = computeCanSave(
@@ -236,6 +272,27 @@ class AddEditTransactionViewModel @Inject constructor(
                     toAccountId = state.toAccountId,
                 ),
             )
+        }
+    }
+
+    fun selectGroup(groupId: Long) {
+        viewModelScope.launch {
+            val leaves = categoryRepo.observeByGroup(groupId).first()
+            val newCategoryId = leaves.firstOrNull()?.id
+            _uiState.update { state ->
+                state.copy(
+                    selectedGroupId = groupId,
+                    leaves = leaves,
+                    selectedCategoryId = newCategoryId,
+                    canSave = computeCanSave(
+                        amountText = state.amountText,
+                        type = state.type,
+                        categoryId = newCategoryId,
+                        accountId = state.selectedAccountId,
+                        toAccountId = state.toAccountId,
+                    ),
+                )
+            }
         }
     }
 
@@ -284,8 +341,37 @@ class AddEditTransactionViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Update the calendar day from a DatePicker (which yields start-of-day millis),
+     * while preserving the currently selected time-of-day (hour:minute) of [date].
+     */
     fun onDateChange(epochMillis: Long) {
-        _uiState.update { it.copy(date = epochMillis) }
+        _uiState.update { state ->
+            val zone = ZoneId.systemDefault()
+            val current = Instant.ofEpochMilli(state.date).atZone(zone)
+            val newDay = Instant.ofEpochMilli(epochMillis).atZone(zone).toLocalDate()
+            val combined = newDay
+                .atTime(current.hour, current.minute, current.second)
+                .atZone(zone)
+                .toInstant()
+                .toEpochMilli()
+            state.copy(date = combined)
+        }
+    }
+
+    /** Set the time-of-day on the existing calendar day of [date]. */
+    fun onTimeChange(hour: Int, minute: Int) {
+        _uiState.update { state ->
+            val zone = ZoneId.systemDefault()
+            val updated = Instant.ofEpochMilli(state.date)
+                .atZone(zone)
+                .withHour(hour)
+                .withMinute(minute)
+                .withSecond(0)
+                .toInstant()
+                .toEpochMilli()
+            state.copy(date = updated)
+        }
     }
 
     fun onNoteChange(text: String) {
@@ -410,10 +496,7 @@ class AddEditTransactionViewModel @Inject constructor(
         return result
     }
 
-    private fun todayEpochMillis(): Long {
-        val zone = ZoneId.systemDefault()
-        return LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
-    }
+    private fun nowEpochMillis(): Long = Instant.now().toEpochMilli()
 }
 
 // Extension to map TxType → CategoryType (mirrors the enum relationship)

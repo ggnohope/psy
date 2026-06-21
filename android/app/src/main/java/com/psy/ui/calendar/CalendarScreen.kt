@@ -280,11 +280,25 @@ private fun CalendarTxRowCard(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
+                // Subtitle: "group · time" (or just time when group is blank, e.g. TRANSFER)
+                val subtitle = if (row.groupName.isNotBlank()) {
+                    "${row.groupName} · ${row.timeLabel}"
+                } else {
+                    row.timeLabel
+                }
+                if (subtitle.isNotBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 1,
+                    )
+                }
                 if (row.note.isNotBlank()) {
                     Text(
                         text = row.note,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         maxLines = 1,
                     )
                 }

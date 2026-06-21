@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,9 +46,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,6 +71,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.psy.domain.model.Account
 import com.psy.domain.model.Category
+import com.psy.domain.model.CategoryGroup
 import com.psy.domain.model.TxType
 import com.psy.domain.util.Money
 import com.psy.ui.theme.CandyGreen
@@ -94,6 +98,7 @@ fun AddEditTransactionScreen(
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
 
     // Photo picker launcher — no runtime permission needed with the Photo Picker API
     val photoLauncher = rememberLauncherForActivityResult(
@@ -162,13 +167,16 @@ fun AddEditTransactionScreen(
             )
 
             // ----------------------------------------------------------------
-            // 3. Category grid (hidden for TRANSFER)
+            // 3. Category picker: group tabs → leaf grid (hidden for TRANSFER)
             // ----------------------------------------------------------------
-            if (uiState.type != TxType.TRANSFER && uiState.categories.isNotEmpty()) {
+            if (uiState.type != TxType.TRANSFER && uiState.groups.isNotEmpty()) {
                 CategorySection(
-                    categories = uiState.categories,
-                    selectedId = uiState.selectedCategoryId,
-                    onSelect = viewModel::selectCategory,
+                    groups = uiState.groups,
+                    leaves = uiState.leaves,
+                    selectedGroupId = uiState.selectedGroupId,
+                    selectedLeafId = uiState.selectedCategoryId,
+                    onSelectGroup = viewModel::selectGroup,
+                    onSelectLeaf = viewModel::selectCategory,
                 )
             }
 
@@ -214,11 +222,12 @@ fun AddEditTransactionScreen(
             }
 
             // ----------------------------------------------------------------
-            // 5. Date picker button
+            // 5. Date + time picker buttons
             // ----------------------------------------------------------------
-            DateSection(
+            DateTimeSection(
                 dateMillis = uiState.date,
                 onPickDate = { showDatePicker = true },
+                onPickTime = { showTimePicker = true },
             )
 
             // ----------------------------------------------------------------
@@ -302,6 +311,46 @@ fun AddEditTransactionScreen(
             },
         ) {
             DatePicker(state = datePickerState)
+        }
+    }
+
+    // ----------------------------------------------------------------
+    // Time picker dialog
+    // ----------------------------------------------------------------
+    if (showTimePicker) {
+        val zone = ZoneId.systemDefault()
+        val current = Instant.ofEpochMilli(
+            if (uiState.date > 0L) uiState.date else System.currentTimeMillis(),
+        ).atZone(zone)
+        val timePickerState = rememberTimePickerState(
+            initialHour = current.hour,
+            initialMinute = current.minute,
+            is24Hour = true,
+        )
+        DatePickerDialog(
+            onDismissRequest = { showTimePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.onTimeChange(timePickerState.hour, timePickerState.minute)
+                    showTimePicker = false
+                }) {
+                    Text("Xác nhận")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Huỷ")
+                }
+            },
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TimePicker(state = timePickerState)
+            }
         }
     }
 }
@@ -391,14 +440,18 @@ private fun AmountSection(
 }
 
 // ---------------------------------------------------------------------------
-// Category grid (4 columns)
+// Category picker: group tab row + leaf grid (4 columns)
 // ---------------------------------------------------------------------------
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CategorySection(
-    categories: List<Category>,
-    selectedId: Long?,
-    onSelect: (Long) -> Unit,
+    groups: List<CategoryGroup>,
+    leaves: List<Category>,
+    selectedGroupId: Long?,
+    selectedLeafId: Long?,
+    onSelectGroup: (Long) -> Unit,
+    onSelectLeaf: (Long) -> Unit,
 ) {
     Column {
         Text(
@@ -407,31 +460,84 @@ private fun CategorySection(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(bottom = 8.dp),
         )
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            contentPadding = PaddingValues(0.dp),
+
+        // ── Group tab row (horizontally scrollable chips) ──
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            // Fixed height: 2 rows × (chip height ~72dp) + spacing.
-            // Use wrapContentHeight() isn't reliable inside scroll, so we
-            // let the grid be non-scrollable at a fixed height.
-            modifier = Modifier.height((((categories.size + 3) / 4) * 80).dp),
-            userScrollEnabled = false,
         ) {
-            items(categories, key = { it.id }) { category ->
-                CategoryChip(
-                    category = category,
-                    isSelected = category.id == selectedId,
-                    onSelect = { onSelect(category.id) },
+            groups.forEach { group ->
+                GroupTabChip(
+                    group = group,
+                    isSelected = group.id == selectedGroupId,
+                    onClick = { onSelectGroup(group.id) },
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // ── Leaf grid for the selected group ──
+        if (leaves.isNotEmpty()) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                contentPadding = PaddingValues(0.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.height((((leaves.size + 3) / 4) * 80).dp),
+                userScrollEnabled = false,
+            ) {
+                items(leaves, key = { it.id }) { leaf ->
+                    LeafChip(
+                        leaf = leaf,
+                        isSelected = leaf.id == selectedLeafId,
+                        onSelect = { onSelectLeaf(leaf.id) },
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun CategoryChip(
-    category: Category,
+private fun GroupTabChip(
+    group: CategoryGroup,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50.dp))
+            .background(
+                if (isSelected) CandyViolet.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.surfaceVariant,
+            )
+            .border(
+                width = if (isSelected) 2.dp else 0.dp,
+                color = if (isSelected) CandyViolet else Color.Transparent,
+                shape = RoundedCornerShape(50.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = group.icon, fontSize = 16.sp)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = group.name,
+            fontSize = 13.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) CandyViolet else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun LeafChip(
+    leaf: Category,
     isSelected: Boolean,
     onSelect: () -> Unit,
 ) {
@@ -452,10 +558,10 @@ private fun CategoryChip(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(text = category.icon, fontSize = 22.sp)
+        Text(text = leaf.icon, fontSize = 22.sp)
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = category.name,
+            text = leaf.name,
             fontSize = 10.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) CandyViolet else MaterialTheme.colorScheme.onSurface,
@@ -617,44 +723,66 @@ private fun PhotoSection(
 }
 
 // ---------------------------------------------------------------------------
-// Date section
+// Date + time section
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun DateSection(
+private fun DateTimeSection(
     dateMillis: Long,
     onPickDate: () -> Unit,
+    onPickTime: () -> Unit,
 ) {
-    val dateLabel = if (dateMillis > 0L) {
-        val zone = ZoneId.systemDefault()
-        val local = Instant.ofEpochMilli(dateMillis).atZone(zone).toLocalDate()
-        local.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-    } else "Chọn ngày"
+    val zone = ZoneId.systemDefault()
+    val zoned = if (dateMillis > 0L) Instant.ofEpochMilli(dateMillis).atZone(zone) else null
+    val dateLabel = zoned?.toLocalDate()?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        ?: "Chọn ngày"
+    val timeLabel = zoned?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: "--:--"
 
     Column {
         Text(
-            text = "Ngày",
+            text = "Thời gian",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(bottom = 4.dp),
         )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(16.dp),
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Date field
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    .clickable(onClick = onPickDate)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            ) {
+                Text(
+                    text = dateLabel,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-                .clickable(onClick = onPickDate)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-        ) {
-            Text(
-                text = dateLabel,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            }
+            // Time field
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    .clickable(onClick = onPickTime)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            ) {
+                Text(
+                    text = timeLabel,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
     }
 }

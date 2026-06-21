@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.psy.domain.model.Currency
 import com.psy.domain.model.TxType
 import com.psy.domain.repository.AccountRepository
+import com.psy.domain.repository.CategoryGroupRepository
 import com.psy.domain.repository.CategoryRepository
 import com.psy.domain.repository.LedgerRepository
 import com.psy.domain.repository.TransactionRepository
@@ -29,6 +30,10 @@ data class TxRow(
     val id: Long,
     val categoryName: String,
     val categoryIcon: String,
+    /** Parent group name of the leaf category; empty for TRANSFER. */
+    val groupName: String = "",
+    /** Transaction time-of-day formatted as HH:mm. */
+    val timeLabel: String = "",
     val accountName: String,
     /** Destination account name for TRANSFER rows; null for INCOME/EXPENSE. */
     val toAccountName: String? = null,
@@ -63,8 +68,11 @@ class HomeViewModel @Inject constructor(
     private val ledgerRepo: LedgerRepository,
     private val transactionRepo: TransactionRepository,
     private val categoryRepo: CategoryRepository,
+    private val groupRepo: CategoryGroupRepository,
     private val accountRepo: AccountRepository,
 ) : ViewModel() {
+
+    private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     // Current-month half-open range [start, nextMonthStart) in epoch millis.
     // This matches the DAO: date >= start AND date < end.
@@ -97,9 +105,11 @@ class HomeViewModel @Inject constructor(
             combine(
                 transactionRepo.observeBetween(ledger.id, start, end),
                 categoryRepo.observeAll(),
+                groupRepo.observeAll(),
                 accountRepo.observeAll(),
-            ) { transactions, categories, accounts ->
+            ) { transactions, categories, groups, accounts ->
                 val categoryMap = categories.associateBy { it.id }
+                val groupMap = groups.associateBy { it.id }
                 val accountMap = accounts.associateBy { it.id }
 
                 var incomeMinor = 0L
@@ -127,14 +137,20 @@ class HomeViewModel @Inject constructor(
                     }
 
                     val rows = txList.map { tx ->
-                        val cat = tx.categoryId?.let { categoryMap[it] }
+                        val leaf = tx.categoryId?.let { categoryMap[it] }
+                        val group = leaf?.let { groupMap[it.groupId] }
                         val acc = accountMap[tx.accountId]
+                        val timeLabel = java.time.Instant.ofEpochMilli(tx.date)
+                            .atZone(zone)
+                            .format(timeFormatter)
                         if (tx.type == TxType.TRANSFER) {
                             val toAcc = tx.toAccountId?.let { accountMap[it] }
                             TxRow(
                                 id = tx.id,
                                 categoryName = acc?.name ?: "—",
                                 categoryIcon = "🔄",
+                                groupName = "",
+                                timeLabel = timeLabel,
                                 accountName = acc?.name ?: "—",
                                 toAccountName = toAcc?.name ?: "—",
                                 type = tx.type,
@@ -145,8 +161,10 @@ class HomeViewModel @Inject constructor(
                         } else {
                             TxRow(
                                 id = tx.id,
-                                categoryName = cat?.name ?: "—",
-                                categoryIcon = cat?.icon ?: "📦",
+                                categoryName = leaf?.name ?: "—",
+                                categoryIcon = leaf?.icon ?: "📦",
+                                groupName = group?.name ?: "",
+                                timeLabel = timeLabel,
                                 accountName = acc?.name ?: "—",
                                 toAccountName = null,
                                 type = tx.type,
