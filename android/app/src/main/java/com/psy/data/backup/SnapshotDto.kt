@@ -3,6 +3,7 @@ package com.psy.data.backup
 import com.psy.data.db.entity.AccountEntity
 import com.psy.data.db.entity.BudgetEntity
 import com.psy.data.db.entity.CategoryEntity
+import com.psy.data.db.entity.CategoryGroupEntity
 import com.psy.data.db.entity.LedgerEntity
 import com.psy.data.db.entity.TransactionEntity
 import kotlinx.serialization.Serializable
@@ -11,9 +12,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class SnapshotDto(
-    val version: Int = 1,
+    val version: Int = 2,
     val ledgers: List<LedgerDto>,
     val accounts: List<AccountDto>,
+    val categoryGroups: List<CategoryGroupDto> = emptyList(),
     val categories: List<CategoryDto>,
     val transactions: List<TransactionDto>,
     val budgets: List<BudgetDto>,
@@ -40,12 +42,21 @@ data class AccountDto(
 )
 
 @Serializable
-data class CategoryDto(
+data class CategoryGroupDto(
     val id: Long,
     val name: String,
     val icon: String,
     val color: Long,
     val type: String,
+    val sortOrder: Int,
+)
+
+@Serializable
+data class CategoryDto(
+    val id: Long,
+    val groupId: Long,
+    val name: String,
+    val icon: String,
     val sortOrder: Int,
 )
 
@@ -69,7 +80,7 @@ data class TransactionDto(
 data class BudgetDto(
     val id: Long,
     val ledgerId: Long,
-    val categoryId: Long?,
+    val groupId: Long?,
     val amountMinor: Long,
 )
 
@@ -81,8 +92,11 @@ fun LedgerDto.toEntity() = LedgerEntity(id, name, icon, currency, createdAt)
 fun AccountEntity.toDto() = AccountDto(id, name, type, icon, color)
 fun AccountDto.toEntity() = AccountEntity(id, name, type, icon, color)
 
-fun CategoryEntity.toDto() = CategoryDto(id, name, icon, color, type, sortOrder)
-fun CategoryDto.toEntity() = CategoryEntity(id, name, icon, color, type, sortOrder)
+fun CategoryGroupEntity.toDto() = CategoryGroupDto(id, name, icon, color, type, sortOrder)
+fun CategoryGroupDto.toEntity() = CategoryGroupEntity(id, name, icon, color, type, sortOrder)
+
+fun CategoryEntity.toDto() = CategoryDto(id, groupId, name, icon, sortOrder)
+fun CategoryDto.toEntity() = CategoryEntity(id, groupId, name, icon, sortOrder)
 
 fun TransactionEntity.toDto() =
     TransactionDto(id, ledgerId, type, amountMinor, categoryId, accountId, toAccountId, note, date, createdAt, updatedAt, photoUri)
@@ -90,5 +104,5 @@ fun TransactionEntity.toDto() =
 fun TransactionDto.toEntity() =
     TransactionEntity(id, ledgerId, type, amountMinor, categoryId, accountId, toAccountId, note, date, createdAt, updatedAt, photoUri)
 
-fun BudgetEntity.toDto() = BudgetDto(id, ledgerId, categoryId, amountMinor)
-fun BudgetDto.toEntity() = BudgetEntity(id, ledgerId, categoryId, amountMinor)
+fun BudgetEntity.toDto() = BudgetDto(id, ledgerId, groupId, amountMinor)
+fun BudgetDto.toEntity() = BudgetEntity(id, ledgerId, groupId, amountMinor)
