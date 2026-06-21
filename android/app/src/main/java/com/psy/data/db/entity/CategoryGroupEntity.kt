@@ -1,14 +1,14 @@
 package com.psy.data.db.entity
 
 import androidx.room.Entity
-import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "categories", indices = [Index("groupId")])
-data class CategoryEntity(
+@Entity(tableName = "category_groups")
+data class CategoryGroupEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val groupId: Long,
     val name: String,
     val icon: String,
+    val color: Long,
+    val type: String,   // CategoryType.name
     val sortOrder: Int,
 )

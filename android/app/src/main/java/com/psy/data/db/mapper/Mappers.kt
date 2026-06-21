@@ -6,8 +6,11 @@ import com.psy.domain.model.*
 fun AccountEntity.toDomain() = Account(id, name, AccountType.valueOf(type), icon, color)
 fun Account.toEntity() = AccountEntity(id, name, type.name, icon, color)
 
-fun CategoryEntity.toDomain() = Category(id, name, icon, color, CategoryType.valueOf(type), sortOrder)
-fun Category.toEntity() = CategoryEntity(id, name, icon, color, type.name, sortOrder)
+fun CategoryGroupEntity.toDomain() = CategoryGroup(id, name, icon, color, CategoryType.valueOf(type), sortOrder)
+fun CategoryGroup.toEntity() = CategoryGroupEntity(id, name, icon, color, type.name, sortOrder)
+
+fun CategoryEntity.toDomain() = Category(id, groupId, name, icon, sortOrder)
+fun Category.toEntity() = CategoryEntity(id, groupId, name, icon, sortOrder)
 
 fun LedgerEntity.toDomain() = Ledger(id, name, icon, currency, createdAt)
 fun Ledger.toEntity() = LedgerEntity(id, name, icon, currency, createdAt)

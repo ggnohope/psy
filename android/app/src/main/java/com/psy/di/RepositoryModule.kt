@@ -15,6 +15,7 @@ import javax.inject.Singleton
 abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindLedgerRepo(impl: LedgerRepositoryImpl): LedgerRepository
     @Binds @Singleton abstract fun bindAccountRepo(impl: AccountRepositoryImpl): AccountRepository
+    @Binds @Singleton abstract fun bindCategoryGroupRepo(impl: CategoryGroupRepositoryImpl): CategoryGroupRepository
     @Binds @Singleton abstract fun bindCategoryRepo(impl: CategoryRepositoryImpl): CategoryRepository
     @Binds @Singleton abstract fun bindTransactionRepo(impl: TransactionRepositoryImpl): TransactionRepository
     @Binds @Singleton abstract fun bindBudgetRepo(impl: BudgetRepositoryImpl): BudgetRepository
