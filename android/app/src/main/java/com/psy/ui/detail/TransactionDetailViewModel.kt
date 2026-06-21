@@ -13,12 +13,11 @@ import com.psy.domain.repository.TransactionRepository
 import com.psy.ui.navigation.Routes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -63,87 +62,83 @@ class TransactionDetailViewModel @Inject constructor(
 
     private val txId: Long = savedStateHandle[Routes.ARG_TX_ID] ?: -1L
 
-    private val _uiState = MutableStateFlow(TransactionDetailUiState())
-    val uiState: StateFlow<TransactionDetailUiState> = _uiState.asStateFlow()
+    // Reactive state: recomputes whenever the tx (or any referenced entity) changes,
+    // so returning from Edit shows fresh data instead of a one-shot init() snapshot.
+    val uiState: StateFlow<TransactionDetailUiState> = combine(
+        txRepo.observeById(txId),
+        categoryRepo.observeAll(),
+        groupRepo.observeAll(),
+        accountRepo.observeAll(),
+        ledgerRepo.observeAll(),
+    ) { tx, categories, groups, accountList, ledgers ->
+        if (tx == null) {
+            return@combine TransactionDetailUiState(loading = false, found = false)
+        }
+
+        val ledger = ledgers.firstOrNull()
+        val currency = if (ledger != null) Currency.of(ledger.currency) else Currency.VND
+
+        val accounts = accountList.associateBy { it.id }
+        val account = accounts[tx.accountId]
+        val toAccount = tx.toAccountId?.let { accounts[it] }
+
+        val zone = ZoneId.systemDefault()
+        val dateTime = Instant.ofEpochMilli(tx.date).atZone(zone)
+        val dateLabel = dateTime.format(DATE_FMT)
+        val timeLabel = dateTime.format(TIME_FMT)
+
+        if (tx.type == TxType.TRANSFER) {
+            return@combine TransactionDetailUiState(
+                loading = false,
+                found = true,
+                icon = "🔁",
+                title = account?.name ?: "Chuyển khoản",
+                ledgerName = ledger?.name ?: "",
+                dateLabel = dateLabel,
+                timeLabel = timeLabel,
+                accountName = account?.name ?: "—",
+                toAccountName = toAccount?.name,
+                categoryLabel = "",
+                amountMinor = tx.amountMinor,
+                type = TxType.TRANSFER,
+                currency = currency,
+                note = tx.note,
+                photoUri = tx.photoUri,
+            )
+        }
+
+        // INCOME / EXPENSE: resolve leaf + its parent group.
+        val leaf = tx.categoryId?.let { id -> categories.firstOrNull { it.id == id } }
+        val group = leaf?.let { l -> groups.firstOrNull { it.id == l.groupId } }
+        val typeText = typeLabel(tx.type)
+        val categoryLabel = if (group != null) "${group.name}($typeText)" else ""
+
+        TransactionDetailUiState(
+            loading = false,
+            found = true,
+            icon = leaf?.icon ?: group?.icon ?: "💸",
+            title = leaf?.name ?: "Giao dịch",
+            ledgerName = ledger?.name ?: "",
+            dateLabel = dateLabel,
+            timeLabel = timeLabel,
+            accountName = account?.name ?: "—",
+            toAccountName = null,
+            categoryLabel = categoryLabel,
+            amountMinor = tx.amountMinor,
+            type = tx.type,
+            currency = currency,
+            note = tx.note,
+            photoUri = tx.photoUri,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = TransactionDetailUiState(),
+    )
 
     // One-shot done signal after a delete; consumed by a LaunchedEffect on the screen.
     private val _doneChannel = Channel<Unit>(capacity = Channel.BUFFERED)
     val doneEvent = _doneChannel.receiveAsFlow()
-
-    init {
-        viewModelScope.launch {
-            val tx = if (txId != -1L) txRepo.getById(txId) else null
-            if (tx == null) {
-                _uiState.update { it.copy(loading = false, found = false) }
-                return@launch
-            }
-
-            val ledger = ledgerRepo.firstOrNull()
-            val currency = if (ledger != null) Currency.of(ledger.currency) else Currency.VND
-
-            val accounts = accountRepo.observeAll().first().associateBy { it.id }
-            val account = accounts[tx.accountId]
-            val toAccount = tx.toAccountId?.let { accounts[it] }
-
-            val zone = ZoneId.systemDefault()
-            val dateTime = Instant.ofEpochMilli(tx.date).atZone(zone)
-            val dateLabel = dateTime.format(DATE_FMT)
-            val timeLabel = dateTime.format(TIME_FMT)
-
-            if (tx.type == TxType.TRANSFER) {
-                _uiState.update {
-                    TransactionDetailUiState(
-                        loading = false,
-                        found = true,
-                        icon = "🔁",
-                        title = account?.name ?: "Chuyển khoản",
-                        ledgerName = ledger?.name ?: "",
-                        dateLabel = dateLabel,
-                        timeLabel = timeLabel,
-                        accountName = account?.name ?: "—",
-                        toAccountName = toAccount?.name,
-                        categoryLabel = "",
-                        amountMinor = tx.amountMinor,
-                        type = TxType.TRANSFER,
-                        currency = currency,
-                        note = tx.note,
-                        photoUri = tx.photoUri,
-                    )
-                }
-                return@launch
-            }
-
-            // INCOME / EXPENSE: resolve leaf + its parent group.
-            val leaf = tx.categoryId?.let { id ->
-                categoryRepo.observeAll().first().firstOrNull { it.id == id }
-            }
-            val group = leaf?.let { l ->
-                groupRepo.observeAll().first().firstOrNull { it.id == l.groupId }
-            }
-            val typeText = typeLabel(tx.type)
-            val categoryLabel = if (group != null) "${group.name}($typeText)" else ""
-
-            _uiState.update {
-                TransactionDetailUiState(
-                    loading = false,
-                    found = true,
-                    icon = leaf?.icon ?: group?.icon ?: "💸",
-                    title = leaf?.name ?: "Giao dịch",
-                    ledgerName = ledger?.name ?: "",
-                    dateLabel = dateLabel,
-                    timeLabel = timeLabel,
-                    accountName = account?.name ?: "—",
-                    toAccountName = null,
-                    categoryLabel = categoryLabel,
-                    amountMinor = tx.amountMinor,
-                    type = tx.type,
-                    currency = currency,
-                    note = tx.note,
-                    photoUri = tx.photoUri,
-                )
-            }
-        }
-    }
 
     fun delete() {
         if (txId == -1L) return

@@ -14,6 +14,8 @@ class TransactionRepositoryImpl @Inject constructor(
 ) : TransactionRepository {
     override fun observeBetween(ledgerId: Long, start: Long, end: Long): Flow<List<Transaction>> =
         dao.observeBetween(ledgerId, start, end).map { list -> list.map { it.toDomain() } }
+    override fun observeById(id: Long): Flow<Transaction?> =
+        dao.observeById(id).map { it?.toDomain() }
     override suspend fun getById(id: Long): Transaction? = dao.getById(id)?.toDomain()
     override suspend fun upsert(tx: Transaction): Long = dao.upsert(tx.toEntity())
     override suspend fun delete(tx: Transaction) = dao.delete(tx.toEntity())

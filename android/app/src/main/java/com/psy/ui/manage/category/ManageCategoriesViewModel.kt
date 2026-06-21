@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.psy.domain.model.Category
 import com.psy.domain.model.CategoryGroup
 import com.psy.domain.model.CategoryType
+import com.psy.domain.repository.BudgetRepository
 import com.psy.domain.repository.CategoryGroupRepository
 import com.psy.domain.repository.CategoryRepository
+import com.psy.domain.repository.LedgerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +51,8 @@ data class ManageCategoriesUiState(
 class ManageCategoriesViewModel @Inject constructor(
     private val groupRepo: CategoryGroupRepository,
     private val categoryRepo: CategoryRepository,
+    private val budgetRepo: BudgetRepository,
+    private val ledgerRepo: LedgerRepository,
 ) : ViewModel() {
 
     private val _type = MutableStateFlow(CategoryType.EXPENSE)
@@ -333,6 +337,11 @@ class ManageCategoriesViewModel @Inject constructor(
             // Cascade: delete all leaves first, then the group itself.
             leaves.forEach { categoryRepo.delete(it) }
             groupRepo.delete(group)
+            // Also drop any budget referencing this group so the Budget screen
+            // doesn't show a phantom item (no FK enforcement on Budget.groupId).
+            ledgerRepo.firstOrNull()?.let { ledger ->
+                budgetRepo.findByGroup(ledger.id, group.id)?.let { budgetRepo.removeBudget(it) }
+            }
             _pendingDeleteGroup.value = null
         }
     }

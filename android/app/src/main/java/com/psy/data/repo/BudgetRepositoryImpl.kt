@@ -21,5 +21,8 @@ class BudgetRepositoryImpl @Inject constructor(
         dao.upsert(BudgetEntity(id = existing?.id ?: 0, ledgerId, groupId, amountMinor))
     }
 
+    override suspend fun findByGroup(ledgerId: Long, groupId: Long): Budget? =
+        dao.findByGroup(ledgerId, groupId)?.toDomain()
+
     override suspend fun removeBudget(budget: Budget) = dao.delete(budget.toEntity())
 }
