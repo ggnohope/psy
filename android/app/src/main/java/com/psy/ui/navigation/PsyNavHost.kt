@@ -15,6 +15,7 @@ import androidx.navigation.navArgument
 import com.psy.ui.addedit.AddEditTransactionScreen
 import com.psy.ui.budget.BudgetScreen
 import com.psy.ui.calendar.CalendarScreen
+import com.psy.ui.detail.TransactionDetailScreen
 import com.psy.ui.home.HomeScreen
 import com.psy.ui.manage.account.ManageAccountsScreen
 import com.psy.ui.manage.category.ManageCategoriesScreen
@@ -54,7 +55,7 @@ fun PsyNavHost(onLogout: () -> Unit) {
             composable(Routes.HOME) {
                 HomeScreen(
                     onAddClick = { navController.navigate(Routes.addEdit()) },
-                    onTxClick = { id -> navController.navigate(Routes.addEdit(id)) },
+                    onTxClick = { id -> navController.navigate(Routes.detail(id)) },
                     onSettingsClick = { navController.navigate(Routes.SETTINGS) },
                 )
             }
@@ -82,6 +83,24 @@ fun PsyNavHost(onLogout: () -> Unit) {
             ) {
                 // ViewModel reads txId from SavedStateHandle automatically via Hilt.
                 AddEditTransactionScreen(onDone = { navController.popBackStack() })
+            }
+
+            composable(
+                route = Routes.DETAIL_PATTERN,
+                arguments = listOf(
+                    navArgument(Routes.ARG_TX_ID) {
+                        type = NavType.LongType
+                        defaultValue = -1L
+                    },
+                ),
+            ) { backStackEntry ->
+                // Capture the id so onEdit can navigate to the editor for this same tx.
+                val txId = backStackEntry.arguments?.getLong(Routes.ARG_TX_ID) ?: -1L
+                TransactionDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onEdit = { navController.navigate(Routes.addEdit(txId)) },
+                    onDeleted = { navController.popBackStack() },
+                )
             }
 
             composable(Routes.SETTINGS) {

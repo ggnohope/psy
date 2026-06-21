@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.Flow
 interface BudgetDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(budget: BudgetEntity): Long
     @Query("SELECT * FROM budgets WHERE ledgerId = :ledgerId") fun observeAll(ledgerId: Long): Flow<List<BudgetEntity>>
-    @Query("SELECT * FROM budgets WHERE ledgerId = :ledgerId AND categoryId IS NULL LIMIT 1") suspend fun findTotal(ledgerId: Long): BudgetEntity?
-    @Query("SELECT * FROM budgets WHERE ledgerId = :ledgerId AND categoryId = :categoryId LIMIT 1") suspend fun findByCategory(ledgerId: Long, categoryId: Long): BudgetEntity?
+    @Query("SELECT * FROM budgets WHERE ledgerId = :ledgerId AND groupId IS NULL LIMIT 1") suspend fun findTotal(ledgerId: Long): BudgetEntity?
+    @Query("SELECT * FROM budgets WHERE ledgerId = :ledgerId AND groupId = :groupId LIMIT 1") suspend fun findByGroup(ledgerId: Long, groupId: Long): BudgetEntity?
     @Delete suspend fun delete(budget: BudgetEntity)
 
     // ── Backup support ──────────────────────────────────────────────────────

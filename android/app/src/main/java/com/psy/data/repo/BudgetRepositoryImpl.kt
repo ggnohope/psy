@@ -16,9 +16,9 @@ class BudgetRepositoryImpl @Inject constructor(
     override fun observeAll(ledgerId: Long): Flow<List<Budget>> =
         dao.observeAll(ledgerId).map { list -> list.map { it.toDomain() } }
 
-    override suspend fun setBudget(ledgerId: Long, categoryId: Long?, amountMinor: Long) {
-        val existing = if (categoryId == null) dao.findTotal(ledgerId) else dao.findByCategory(ledgerId, categoryId)
-        dao.upsert(BudgetEntity(id = existing?.id ?: 0, ledgerId, categoryId, amountMinor))
+    override suspend fun setBudget(ledgerId: Long, groupId: Long?, amountMinor: Long) {
+        val existing = if (groupId == null) dao.findTotal(ledgerId) else dao.findByGroup(ledgerId, groupId)
+        dao.upsert(BudgetEntity(id = existing?.id ?: 0, ledgerId, groupId, amountMinor))
     }
 
     override suspend fun removeBudget(budget: Budget) = dao.delete(budget.toEntity())

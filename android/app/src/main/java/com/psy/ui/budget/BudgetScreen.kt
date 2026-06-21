@@ -147,11 +147,11 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Text(
-                                text = item.category?.icon ?: "📦",
+                                text = item.group?.icon ?: "📦",
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             Text(
-                                text = item.category?.name ?: "Danh mục",
+                                text = item.group?.name ?: "Nhóm",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Medium,
                             )
@@ -177,14 +177,14 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                 }
             }
 
-            // Add category budget button
-            if (state.availableCategories.isNotEmpty() || state.categoryBudgets.isNotEmpty()) {
+            // Add group budget button
+            if (state.availableGroups.isNotEmpty() || state.categoryBudgets.isNotEmpty()) {
                 OutlinedButton(
                     onClick = viewModel::startAddCategory,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = state.availableCategories.isNotEmpty(),
+                    enabled = state.availableGroups.isNotEmpty(),
                 ) {
-                    Text("＋ Thêm ngân sách danh mục")
+                    Text("＋ Thêm ngân sách nhóm")
                 }
             }
 
@@ -210,26 +210,26 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                 ) {
                     // Title
                     Text(
-                        text = if (state.editorMode == EditorMode.TOTAL) "Ngân sách tổng" else "Ngân sách danh mục",
+                        text = if (state.editorMode == EditorMode.TOTAL) "Ngân sách tổng" else "Ngân sách nhóm",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
 
-                    // Category picker (only when adding a new category budget)
+                    // Group picker (only when adding a new group budget)
                     if (state.editorMode == EditorMode.CATEGORY && !state.isEditing) {
                         Text(
-                            text = "Chọn danh mục",
+                            text = "Chọn nhóm",
                             style = MaterialTheme.typography.labelLarge,
                         )
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            state.availableCategories.forEach { cat ->
+                            state.availableGroups.forEach { group ->
                                 FilterChip(
-                                    selected = state.editorCategoryId == cat.id,
-                                    onClick = { viewModel.selectEditorCategory(cat.id) },
-                                    label = { Text("${cat.icon} ${cat.name}") },
+                                    selected = state.editorGroupId == group.id,
+                                    onClick = { viewModel.selectEditorGroup(group.id) },
+                                    label = { Text("${group.icon} ${group.name}") },
                                 )
                             }
                         }

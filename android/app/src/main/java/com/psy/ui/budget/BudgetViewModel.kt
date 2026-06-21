@@ -3,11 +3,12 @@ package com.psy.ui.budget
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.psy.domain.model.Budget
-import com.psy.domain.model.Category
+import com.psy.domain.model.CategoryGroup
 import com.psy.domain.model.CategoryType
 import com.psy.domain.model.Currency
 import com.psy.domain.model.TxType
 import com.psy.domain.repository.BudgetRepository
+import com.psy.domain.repository.CategoryGroupRepository
 import com.psy.domain.repository.CategoryRepository
 import com.psy.domain.repository.LedgerRepository
 import com.psy.domain.repository.TransactionRepository
@@ -39,8 +40,16 @@ private data class EditorSnapshot(
     val open: Boolean,
     val editingBudget: Budget?,
     val mode: EditorMode,
-    val categoryId: Long?,
+    val groupId: Long?,
     val amountText: String,
+)
+
+/** Domain inputs bundled to keep the main combine within the 5-flow typed limit. */
+private data class DomainData(
+    val monthTxns: List<com.psy.domain.model.Transaction>,
+    val budgets: List<Budget>,
+    val categories: List<com.psy.domain.model.Category>,
+    val groups: List<CategoryGroup>,
 )
 
 // ---------------------------------------------------------------------------
@@ -65,7 +74,7 @@ data class TotalBudget(
  */
 data class CategoryBudgetItem(
     val budget: Budget,
-    val category: Category?,
+    val group: CategoryGroup?,
     val limitMinor: Long,
     val spentMinor: Long,
     val percent: Float,
@@ -79,9 +88,9 @@ data class BudgetUiState(
     // Editor
     val editorOpen: Boolean = false,
     val editorMode: EditorMode = EditorMode.TOTAL,
-    val editorCategoryId: Long? = null,
+    val editorGroupId: Long? = null,
     val draftAmountText: String = "",
-    val availableCategories: List<Category> = emptyList(),
+    val availableGroups: List<CategoryGroup> = emptyList(),
     val isEditing: Boolean = false,
     val canSave: Boolean = false,
     val loading: Boolean = true,
@@ -96,6 +105,7 @@ class BudgetViewModel @Inject constructor(
     private val budgetRepo: BudgetRepository,
     private val transactionRepo: TransactionRepository,
     private val categoryRepo: CategoryRepository,
+    private val groupRepo: CategoryGroupRepository,
     private val ledgerRepo: LedgerRepository,
 ) : ViewModel() {
 
@@ -105,7 +115,7 @@ class BudgetViewModel @Inject constructor(
     private val _editorOpen = MutableStateFlow(false)
     private val _editingBudget = MutableStateFlow<Budget?>(null)
     private val _editorMode = MutableStateFlow(EditorMode.TOTAL)
-    private val _editorCategoryId = MutableStateFlow<Long?>(null)
+    private val _editorGroupId = MutableStateFlow<Long?>(null)
     private val _draftAmountText = MutableStateFlow("")
 
     // Combined editor snapshot (avoids 8-arg combine in the main pipeline).
@@ -113,10 +123,10 @@ class BudgetViewModel @Inject constructor(
         _editorOpen,
         _editingBudget,
         _editorMode,
-        _editorCategoryId,
+        _editorGroupId,
         _draftAmountText,
-    ) { open, editing, mode, catId, text ->
-        EditorSnapshot(open, editing, mode, catId, text)
+    ) { open, editing, mode, groupId, text ->
+        EditorSnapshot(open, editing, mode, groupId, text)
     }
 
     // Cached ledger id so save/remove can use it in a coroutine without waiting for flow.
@@ -142,7 +152,7 @@ class BudgetViewModel @Inject constructor(
     fun startAddTotal() {
         _editorMode.value = EditorMode.TOTAL
         _editingBudget.value = null
-        _editorCategoryId.value = null
+        _editorGroupId.value = null
         _draftAmountText.value = ""
         _editorOpen.value = true
     }
@@ -150,15 +160,15 @@ class BudgetViewModel @Inject constructor(
     fun startAddCategory() {
         _editorMode.value = EditorMode.CATEGORY
         _editingBudget.value = null
-        _editorCategoryId.value = null
+        _editorGroupId.value = null
         _draftAmountText.value = ""
         _editorOpen.value = true
     }
 
     fun startEdit(budget: Budget) {
         _editingBudget.value = budget
-        _editorMode.value = if (budget.categoryId == null) EditorMode.TOTAL else EditorMode.CATEGORY
-        _editorCategoryId.value = budget.categoryId
+        _editorMode.value = if (budget.groupId == null) EditorMode.TOTAL else EditorMode.CATEGORY
+        _editorGroupId.value = budget.groupId
         // For VND (fractionDigits = 0) the stored amountMinor equals the integer the user typed.
         _draftAmountText.value = budget.amountMinor.toString()
         _editorOpen.value = true
@@ -168,14 +178,14 @@ class BudgetViewModel @Inject constructor(
         _draftAmountText.value = s.filter { it.isDigit() }
     }
 
-    fun selectEditorCategory(id: Long) {
-        _editorCategoryId.value = id
+    fun selectEditorGroup(id: Long) {
+        _editorGroupId.value = id
     }
 
     fun closeEditor() {
         _editorOpen.value = false
         _editingBudget.value = null
-        _editorCategoryId.value = null
+        _editorGroupId.value = null
         _draftAmountText.value = ""
     }
 
@@ -183,15 +193,15 @@ class BudgetViewModel @Inject constructor(
         // For VND (fractionDigits = 0): typed integer IS the amount in minor units (đồng).
         val amount = _draftAmountText.value.filter { it.isDigit() }.toLongOrNull() ?: 0L
         val mode = _editorMode.value
-        val catId = if (mode == EditorMode.TOTAL) null else _editorCategoryId.value
+        val groupId = if (mode == EditorMode.TOTAL) null else _editorGroupId.value
 
         if (amount <= 0L) return
-        if (mode == EditorMode.CATEGORY && _editingBudget.value == null && catId == null) return
+        if (mode == EditorMode.CATEGORY && _editingBudget.value == null && groupId == null) return
 
         val ledgerId = _cachedLedgerId ?: return
 
         viewModelScope.launch {
-            budgetRepo.setBudget(ledgerId, catId, amount)
+            budgetRepo.setBudget(ledgerId, groupId, amount)
             closeEditor()
         }
     }
@@ -226,22 +236,25 @@ class BudgetViewModel @Inject constructor(
                 val monthTxnsFlow = transactionRepo.observeBetween(ledger.id, monthStart, monthEnd)
                 val budgetsFlow = budgetRepo.observeAll(ledger.id)
                 val categoriesFlow = categoryRepo.observeAll()
+                val groupsFlow = groupRepo.observeByType(CategoryType.EXPENSE)
 
-                // Combine domain data (3 flows) first, then zip with editor snapshot.
-                val domainFlow = combine(monthTxnsFlow, budgetsFlow, categoriesFlow) {
-                    monthTxns, budgets, categories ->
-                    Triple(monthTxns, budgets, categories)
+                // Combine domain data (4 flows) first, then zip with editor snapshot.
+                val domainFlow = combine(monthTxnsFlow, budgetsFlow, categoriesFlow, groupsFlow) {
+                    monthTxns, budgets, categories, groups ->
+                    DomainData(monthTxns, budgets, categories, groups)
                 }
 
-                combine(domainFlow, editorSnapshot) { (monthTxns, budgets, categories), editor ->
-                    val categoryMap = categories.associateBy { it.id }
+                combine(domainFlow, editorSnapshot) { (monthTxns, budgets, categories, groups), editor ->
+                    val groupMap = groups.associateBy { it.id }
+                    // leafId -> groupId so each EXPENSE tx can be attributed to its parent group.
+                    val leafToGroup = categories.associate { it.id to it.groupId }
 
                     // Spent = EXPENSE only; INCOME + TRANSFER are excluded.
                     val expenseTxns = monthTxns.filter { it.type == TxType.EXPENSE }
                     val totalSpent = expenseTxns.sumOf { it.amountMinor }
 
                     // Total (uncategorised) budget
-                    val totalBudgetDomain = budgets.firstOrNull { it.categoryId == null }
+                    val totalBudgetDomain = budgets.firstOrNull { it.groupId == null }
                     val total = totalBudgetDomain?.let { b ->
                         val pct = if (b.amountMinor > 0) totalSpent.toFloat() / b.amountMinor else 0f
                         TotalBudget(
@@ -252,38 +265,39 @@ class BudgetViewModel @Inject constructor(
                         )
                     }
 
-                    // Per-category budgets — sorted descending by percent utilisation.
+                    // Per-group budgets — sorted descending by percent utilisation.
                     val categoryBudgets = budgets
-                        .filter { it.categoryId != null }
+                        .filter { it.groupId != null }
                         .mapNotNull { b ->
-                            val cat = categoryMap[b.categoryId]
-                            val catSpent = expenseTxns
-                                .filter { it.categoryId == b.categoryId }
+                            val group = groupMap[b.groupId]
+                            // Sum EXPENSE txns whose leaf belongs to this budget's group.
+                            val groupSpent = expenseTxns
+                                .filter { tx -> leafToGroup[tx.categoryId] == b.groupId }
                                 .sumOf { it.amountMinor }
-                            val pct = if (b.amountMinor > 0) catSpent.toFloat() / b.amountMinor else 0f
+                            val pct = if (b.amountMinor > 0) groupSpent.toFloat() / b.amountMinor else 0f
                             CategoryBudgetItem(
                                 budget = b,
-                                category = cat,
+                                group = group,
                                 limitMinor = b.amountMinor,
-                                spentMinor = catSpent,
+                                spentMinor = groupSpent,
                                 percent = pct,
                             )
                         }
                         .sortedByDescending { it.percent }
 
-                    // EXPENSE categories that are not yet budgeted (for the picker).
-                    val budgetedCategoryIds = budgets
-                        .mapNotNull { it.categoryId }
+                    // EXPENSE groups that are not yet budgeted (for the picker).
+                    val budgetedGroupIds = budgets
+                        .mapNotNull { it.groupId }
                         .toSet()
-                    val availableCategories = categories
-                        .filter { it.type == CategoryType.EXPENSE && it.id !in budgetedCategoryIds }
+                    val availableGroups = groups
+                        .filter { it.id !in budgetedGroupIds }
 
-                    // canSave: amount > 0 AND (total mode OR editing OR category selected)
+                    // canSave: amount > 0 AND (total mode OR editing OR group selected)
                     val parsedAmount = editor.amountText.filter { it.isDigit() }.toLongOrNull() ?: 0L
                     val canSave = parsedAmount > 0L &&
                         (editor.mode == EditorMode.TOTAL ||
                             editor.editingBudget != null ||
-                            editor.categoryId != null)
+                            editor.groupId != null)
 
                     BudgetUiState(
                         monthLabel = month,
@@ -292,9 +306,9 @@ class BudgetViewModel @Inject constructor(
                         categoryBudgets = categoryBudgets,
                         editorOpen = editor.open,
                         editorMode = editor.mode,
-                        editorCategoryId = editor.categoryId,
+                        editorGroupId = editor.groupId,
                         draftAmountText = editor.amountText,
-                        availableCategories = availableCategories,
+                        availableGroups = availableGroups,
                         isEditing = editor.editingBudget != null,
                         canSave = canSave,
                         loading = false,

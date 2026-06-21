@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.psy.domain.model.Account
 import com.psy.domain.model.Category
+import com.psy.domain.model.CategoryGroup
 import com.psy.domain.model.Currency
 import com.psy.domain.model.TxType
 import com.psy.domain.repository.AccountRepository
+import com.psy.domain.repository.CategoryGroupRepository
 import com.psy.domain.repository.CategoryRepository
 import com.psy.domain.repository.LedgerRepository
 import com.psy.domain.repository.TransactionRepository
@@ -37,10 +39,29 @@ data class StatsSummary(
     val avgPerDayMinor: Long = 0L,
 )
 
-data class TopEntry(
-    val category: Category,
+data class TopLeaf(
+    val name: String,
+    val icon: String,
     val amountMinor: Long,
-    val percent: Float,
+    val percentInGroup: Float,
+    val count: Int,
+)
+
+data class TopGroup(
+    val groupId: Long,
+    val name: String,
+    val icon: String,
+    val color: Long,
+    val amountMinor: Long,
+    val percentOfTotal: Float,
+    val count: Int,
+    val children: List<TopLeaf>,
+)
+
+/** Categories (leaves) + their parent groups, bundled to fit the 5-flow combine limit. */
+private data class CategoryData(
+    val categories: List<Category>,
+    val groups: List<CategoryGroup>,
 )
 
 /** Income/expense rollup for a single account in the selected month (transfers excluded). */
@@ -60,7 +81,7 @@ data class StatsUiState(
     val summary: StatsSummary = StatsSummary(),
     val pieMode: TxType = TxType.EXPENSE,
     val slices: List<PieSlice> = emptyList(),
-    val top: List<TopEntry> = emptyList(),
+    val top: List<TopGroup> = emptyList(),
     val trend: List<MonthBars> = emptyList(),
     // Account dimension
     val accounts: List<Account> = emptyList(),
@@ -78,6 +99,7 @@ class StatsViewModel @Inject constructor(
     private val ledgerRepo: LedgerRepository,
     private val transactionRepo: TransactionRepository,
     private val categoryRepo: CategoryRepository,
+    private val groupRepo: CategoryGroupRepository,
     private val accountRepo: AccountRepository,
 ) : ViewModel() {
 
@@ -123,14 +145,23 @@ class StatsViewModel @Inject constructor(
                 // Query 6-month window; derive current month subset from it
                 val windowFlow = transactionRepo.observeBetween(ledger.id, trendStart, monthEnd)
 
+                // Bundle leaves + groups into one flow so the main combine stays at 5 slots.
+                val categoryDataFlow = combine(
+                    categoryRepo.observeAll(),
+                    groupRepo.observeAll(),
+                ) { categories, groups -> CategoryData(categories, groups) }
+
                 combine(
                     windowFlow,
-                    categoryRepo.observeAll(),
+                    categoryDataFlow,
                     pieMode,
                     accountRepo.observeAll(),
                     accountFilter,
-                ) { windowTxns, categories, currentPieMode, accounts, currentAccountFilter ->
+                ) { windowTxns, categoryData, currentPieMode, accounts, currentAccountFilter ->
+                    val categories = categoryData.categories
+                    val groups = categoryData.groups
                     val categoryMap = categories.associateBy { it.id }
+                    val groupMap = groups.associateBy { it.id }
 
                     // ── Per-account breakdown (computed from ALL accounts, before filtering) ──
                     // Always reflects the full month so the comparison card can compare accounts.
@@ -185,40 +216,79 @@ class StatsViewModel @Inject constructor(
                     val daysToCount = if (month == currentYM) today.dayOfMonth else month.lengthOfMonth()
                     val avgPerDayMinor = expenseMinor / maxOf(1, daysToCount)
 
-                    // ── Pie slices ────────────────────────────────────────────
+                    // ── Pie slices + top groups (2-level) ─────────────────────
                     val pieTxns = monthTxns.filter { tx ->
                         tx.type == currentPieMode && tx.categoryId != null
                     }
-                    val pieByCategory = pieTxns
-                        .groupBy { it.categoryId!! }
-                        .mapValues { (_, txList) -> txList.sumOf { it.amountMinor } }
+
+                    // Group pieTxns by their leaf's parent group; skip txns whose leaf is gone.
+                    // groupId -> (leafId -> list of txns)
+                    val byGroup = HashMap<Long, HashMap<Long, MutableList<Long>>>()
+                    pieTxns.forEach { tx ->
+                        val leaf = categoryMap[tx.categoryId] ?: return@forEach
+                        byGroup
+                            .getOrPut(leaf.groupId) { HashMap() }
+                            .getOrPut(leaf.id) { mutableListOf() }
+                            .add(tx.amountMinor)
+                    }
 
                     // Pie slices get distinct colors from a fixed palette by index, so the
-                    // chart is always readable even when categories share the same color.
+                    // chart is always readable even when groups share the same color.
                     val piePalette = listOf(
                         0xFFA18CFFL, 0xFF7FD8FFL, 0xFFFF8FD6L, 0xFFFF5FA2L, 0xFF22C55EL,
                         0xFFFFB86BL, 0xFF6BCB77L, 0xFF4D96FFL, 0xFFFF6B6BL, 0xFFB088F9L,
                     )
-                    val slices = pieByCategory
-                        .mapNotNull { (catId, amount) ->
-                            val cat = categoryMap[catId] ?: return@mapNotNull null
-                            cat.name to amount
-                        }
-                        .sortedByDescending { it.second }
-                        .mapIndexed { index, (name, amount) ->
-                            PieSlice(name, amount, piePalette[index % piePalette.size])
-                        }
 
-                    // ── Top entries ───────────────────────────────────────────
-                    val pieTotal = slices.sumOf { it.amountMinor }
-                    val top = pieByCategory
-                        .mapNotNull { (catId, amount) ->
-                            val cat = categoryMap[catId] ?: return@mapNotNull null
-                            val percent = if (pieTotal > 0L) amount.toFloat() / pieTotal.toFloat() else 0f
-                            TopEntry(cat, amount, percent)
+                    // Group totals, sorted desc — drives both pie slices and the top list,
+                    // so palette index (=> color) matches between pie and list rows.
+                    data class GroupAgg(val groupId: Long, val amount: Long, val leaves: Map<Long, List<Long>>)
+                    val sortedGroups = byGroup
+                        .map { (gid, leafMap) ->
+                            val amount = leafMap.values.sumOf { amounts -> amounts.sum() }
+                            GroupAgg(gid, amount, leafMap)
                         }
-                        .sortedByDescending { it.amountMinor }
-                        .take(10)
+                        .sortedByDescending { it.amount }
+
+                    val pieTotal = sortedGroups.sumOf { it.amount }
+
+                    val slices = sortedGroups.mapIndexedNotNull { index, agg ->
+                        val group = groupMap[agg.groupId] ?: return@mapIndexedNotNull null
+                        PieSlice(group.name, agg.amount, piePalette[index % piePalette.size])
+                    }
+
+                    val top = sortedGroups.mapIndexedNotNull { index, agg ->
+                        val group = groupMap[agg.groupId] ?: return@mapIndexedNotNull null
+                        val color = piePalette[index % piePalette.size]
+                        val groupAmount = agg.amount
+                        val groupCount = agg.leaves.values.sumOf { it.size }
+                        val children = agg.leaves
+                            .mapNotNull { (leafId, amounts) ->
+                                val leaf = categoryMap[leafId] ?: return@mapNotNull null
+                                val leafAmount = amounts.sum()
+                                TopLeaf(
+                                    name = leaf.name,
+                                    icon = leaf.icon,
+                                    amountMinor = leafAmount,
+                                    percentInGroup = if (groupAmount > 0L) {
+                                        leafAmount.toFloat() / groupAmount.toFloat()
+                                    } else 0f,
+                                    count = amounts.size,
+                                )
+                            }
+                            .sortedByDescending { it.amountMinor }
+                        TopGroup(
+                            groupId = agg.groupId,
+                            name = group.name,
+                            icon = group.icon,
+                            color = color,
+                            amountMinor = groupAmount,
+                            percentOfTotal = if (pieTotal > 0L) {
+                                groupAmount.toFloat() / pieTotal.toFloat()
+                            } else 0f,
+                            count = groupCount,
+                            children = children,
+                        )
+                    }
 
                     // ── Trend (6 months) ──────────────────────────────────────
                     val trendMonths = (5 downTo 0).map { offset -> month.minusMonths(offset.toLong()) }
