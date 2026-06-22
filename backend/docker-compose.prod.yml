@@ -53,3 +53,5 @@ services:
 
 volumes:
   psy_pgdata:
+  caddy_data:
+  caddy_config:
