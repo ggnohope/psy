@@ -1,0 +1,3 @@
+psy-backend.duckdns.org {
+    reverse_proxy psy-server:8080
+}

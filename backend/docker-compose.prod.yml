@@ -36,6 +36,20 @@ services:
       GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:?set GOOGLE_CLIENT_ID in .env}"
     ports:
       - "8080:8080"
+      
+  caddy:
+    image: caddy:2
+    container_name: psy-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - psy-server
 
 volumes:
   psy_pgdata:
