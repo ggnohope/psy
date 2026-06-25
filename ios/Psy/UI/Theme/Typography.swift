@@ -1,12 +1,24 @@
 import SwiftUI
 
-/// Quicksand typography mirroring CandyTypography in Type.kt.
-/// Weights come from the variable font; sizes/weights match the Android styles.
+/// HostGuardIQ typography. Space Grotesk for display/numbers, IBM Plex Sans for body/UI,
+/// IBM Plex Mono for eyebrows/time/codes. Mirrors Android's PsyTypography.
 enum PsyFont {
-    private static let family = "Quicksand"
+    static let spaceGrotesk = "Space Grotesk"
+    static let plexSans = "IBM Plex Sans"
+    static let plexMono = "IBM Plex Mono"
 
-    static let headlineMedium = Font.custom(family, size: 24).weight(.heavy)   // ExtraBold
-    static let titleMedium    = Font.custom(family, size: 16).weight(.bold)
-    static let bodyMedium     = Font.custom(family, size: 14).weight(.medium)
-    static let labelSmall     = Font.custom(family, size: 11).weight(.semibold)
+    // Display / numbers
+    static let headlineMedium = Font.custom(spaceGrotesk, size: 28).weight(.bold)   // screen titles
+    static let titleLarge     = Font.custom(spaceGrotesk, size: 20).weight(.semibold)
+    static let titleMedium    = Font.custom(spaceGrotesk, size: 18).weight(.semibold)
+    static func display(_ size: CGFloat) -> Font { Font.custom(spaceGrotesk, size: size).weight(.bold) }
+
+    // Body / UI
+    static let bodyLarge      = Font.custom(plexSans, size: 16)
+    static let bodyMedium     = Font.custom(plexSans, size: 14)
+    static let labelLarge     = Font.custom(plexSans, size: 16).weight(.semibold)
+
+    // Mono / eyebrows / time
+    static let labelSmall     = Font.custom(plexMono, size: 11).weight(.semibold)
+    static func mono(_ size: CGFloat) -> Font { Font.custom(plexMono, size: size).weight(.semibold) }
 }

@@ -19,14 +19,24 @@ extension AccountEntity {
     }
 }
 
+extension CategoryGroupEntity {
+    func toDomain() -> CategoryGroup {
+        CategoryGroup(id: id, name: name, icon: icon, color: color,
+                      type: CategoryType(rawValue: type) ?? .expense, sortOrder: sortOrder)
+    }
+    func apply(_ d: CategoryGroup) { name = d.name; icon = d.icon; color = d.color; type = d.type.rawValue; sortOrder = d.sortOrder }
+    convenience init(from d: CategoryGroup, id: Int64) {
+        self.init(id: id, name: d.name, icon: d.icon, color: d.color, type: d.type.rawValue, sortOrder: d.sortOrder)
+    }
+}
+
 extension CategoryEntity {
     func toDomain() -> PsyCore.Category {
-        PsyCore.Category(id: id, name: name, icon: icon, color: color,
-                 type: CategoryType(rawValue: type) ?? .expense, sortOrder: sortOrder)
+        PsyCore.Category(id: id, groupId: groupId, name: name, icon: icon, sortOrder: sortOrder)
     }
-    func apply(_ d: PsyCore.Category) { name = d.name; icon = d.icon; color = d.color; type = d.type.rawValue; sortOrder = d.sortOrder }
+    func apply(_ d: PsyCore.Category) { groupId = d.groupId; name = d.name; icon = d.icon; sortOrder = d.sortOrder }
     convenience init(from d: PsyCore.Category, id: Int64) {
-        self.init(id: id, name: d.name, icon: d.icon, color: d.color, type: d.type.rawValue, sortOrder: d.sortOrder)
+        self.init(id: id, groupId: d.groupId, name: d.name, icon: d.icon, sortOrder: d.sortOrder)
     }
 }
 
@@ -50,9 +60,9 @@ extension TransactionEntity {
 }
 
 extension BudgetEntity {
-    func toDomain() -> Budget { Budget(id: id, ledgerId: ledgerId, categoryId: categoryId, amountMinor: amountMinor) }
-    func apply(_ d: Budget) { ledgerId = d.ledgerId; categoryId = d.categoryId; amountMinor = d.amountMinor }
+    func toDomain() -> Budget { Budget(id: id, ledgerId: ledgerId, groupId: groupId, amountMinor: amountMinor) }
+    func apply(_ d: Budget) { ledgerId = d.ledgerId; groupId = d.groupId; amountMinor = d.amountMinor }
     convenience init(from d: Budget, id: Int64) {
-        self.init(id: id, ledgerId: d.ledgerId, categoryId: d.categoryId, amountMinor: d.amountMinor)
+        self.init(id: id, ledgerId: d.ledgerId, groupId: d.groupId, amountMinor: d.amountMinor)
     }
 }

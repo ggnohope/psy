@@ -45,6 +45,9 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>Quicksand.ttf</string>
+		<string>SpaceGrotesk-Variable.ttf</string>
+		<string>IBMPlexSans-Variable.ttf</string>
+		<string>IBMPlexMono-SemiBold.ttf</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>

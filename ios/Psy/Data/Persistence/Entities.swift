@@ -25,8 +25,9 @@ final class AccountEntity {
     }
 }
 
+/// PARENT level of the 2-level hierarchy (carries color + type). Mirrors Android CategoryGroup.
 @Model
-final class CategoryEntity {
+final class CategoryGroupEntity {
     @Attribute(.unique) var id: Int64
     var name: String
     var icon: String
@@ -35,6 +36,19 @@ final class CategoryEntity {
     var sortOrder: Int
     init(id: Int64, name: String, icon: String, color: Int64, type: String, sortOrder: Int) {
         self.id = id; self.name = name; self.icon = icon; self.color = color; self.type = type; self.sortOrder = sortOrder
+    }
+}
+
+/// LEAF level. Color + type derive from its parent group (`groupId`).
+@Model
+final class CategoryEntity {
+    @Attribute(.unique) var id: Int64
+    var groupId: Int64
+    var name: String
+    var icon: String
+    var sortOrder: Int
+    init(id: Int64, groupId: Int64, name: String, icon: String, sortOrder: Int) {
+        self.id = id; self.groupId = groupId; self.name = name; self.icon = icon; self.sortOrder = sortOrder
     }
 }
 
@@ -65,9 +79,10 @@ final class TransactionEntity {
 final class BudgetEntity {
     @Attribute(.unique) var id: Int64
     var ledgerId: Int64
-    var categoryId: Int64?
+    /// References a CategoryGroup (nil = total budget). Mirrors Android.
+    var groupId: Int64?
     var amountMinor: Int64
-    init(id: Int64, ledgerId: Int64, categoryId: Int64?, amountMinor: Int64) {
-        self.id = id; self.ledgerId = ledgerId; self.categoryId = categoryId; self.amountMinor = amountMinor
+    init(id: Int64, ledgerId: Int64, groupId: Int64?, amountMinor: Int64) {
+        self.id = id; self.ledgerId = ledgerId; self.groupId = groupId; self.amountMinor = amountMinor
     }
 }

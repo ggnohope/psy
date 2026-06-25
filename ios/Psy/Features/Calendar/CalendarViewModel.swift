@@ -43,15 +43,16 @@ final class CalendarViewModel {
                 guard let ledger = ledgers.first else { return Just(nil).eraseToAnyPublisher() }
                 let currency = Currency.of(ledger.currency)
                 let start = month.startMillis(cal), end = month.endMillis(cal)
+                let catsAndGroups = c.categoryRepo.observeAll().combineLatest(c.categoryGroupRepo.observeAll())
                 return Publishers.CombineLatest4(
                     c.transactionRepo.observeBetween(ledgerId: ledger.id, start: start, end: end),
-                    c.categoryRepo.observeAll(),
+                    catsAndGroups,
                     c.accountRepo.observeAll(),
                     selDayPub
                 )
-                .map { txns, cats, accts, selDay in
+                .map { txns, cg, accts, selDay in
                     let result = CalendarEngine.build(
-                        monthTransactions: txns, month: month, categories: cats, accounts: accts,
+                        monthTransactions: txns, month: month, categories: cg.0, groups: cg.1, accounts: accts,
                         selectedDay: selDay, calendar: cal, now: now
                     )
                     return (currency, month, result)

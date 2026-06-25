@@ -273,10 +273,11 @@ struct StatsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func topEntryRow(_ entry: TopEntry) -> some View {
+    private func topEntryRow(_ entry: TopGroup) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("\(entry.category.icon) \(entry.category.name)")
+            HStack(spacing: 8) {
+                LucideIcon(name: entry.icon, size: 18, tint: Color(argb: entry.color))
+                Text(entry.name)
                     .font(PsyFont.bodyMedium)
                     .foregroundStyle(psyColors.onSurface)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -284,11 +285,11 @@ struct StatsView: View {
                     .font(PsyFont.labelSmall)
                     .fontWeight(.medium)
                     .foregroundStyle(psyColors.onSurface)
-                Text("(\(Int(entry.percent * 100))%)")
+                Text("(\(Int(entry.percentOfTotal * 100))%)")
                     .font(PsyFont.labelSmall)
                     .foregroundStyle(psyColors.onSurface.opacity(0.6))
             }
-            barLine(fraction: entry.percent, color: Color(argb: entry.category.color))
+            barLine(fraction: entry.percentOfTotal, color: Color(argb: entry.color))
                 .frame(height: 8)
         }
     }
