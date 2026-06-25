@@ -1,8 +1,8 @@
 import SwiftUI
 import PsyCore
 
-/// Calendar screen: month selector, a Monday-start day grid with income/expense dots,
-/// and the selected day's transaction list. Ports CalendarScreen.kt.
+/// Calendar screen: month switcher, a Monday-start day grid with income/expense dots,
+/// and the selected day's transaction list. Ports CalendarScreen.kt. HostGuardIQ re-skin.
 struct CalendarView: View {
     let container: AppContainer
     @Environment(\.psyColors) private var psyColors
@@ -18,50 +18,71 @@ struct CalendarView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 0) {
-                    MonthSelector(label: vm.monthLabel, onPrev: vm.prevMonth, onNext: vm.nextMonth)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
+                VStack(alignment: .leading, spacing: 18) {
+                    titleBlock
 
-                    weekdayHeader
-                    Spacer().frame(height: 4)
+                    MonthSwitcher(label: vm.monthLabel, onPrev: vm.prevMonth, onNext: vm.nextMonth)
 
-                    if !vm.loading {
-                        grid
-                    }
+                    calendarCard
 
-                    Divider().padding(.top, 8)
+                    dayDivider
 
-                    dayList
+                    daySection
 
                     Spacer(minLength: 80)
                 }
+                .padding(22)
             }
-            .background(psyColors.background.ignoresSafeArea())
-            .navigationTitle("Lịch")
+            .background(psyColors.bg.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
-    // MARK: - Weekday header (Monday-first)
+    // MARK: - Title
+
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            EyebrowLabel(text: "Dòng thời gian")
+            Text("Lịch")
+                .font(PsyFont.headlineMedium)
+                .foregroundStyle(psyColors.text)
+        }
+    }
+
+    // MARK: - Calendar card
+
+    private var calendarCard: some View {
+        VStack(spacing: 10) {
+            weekdayHeader
+            if !vm.loading {
+                grid
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(psyColors.surface)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(psyColors.hair, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
 
     private var weekdayHeader: some View {
         HStack(spacing: 0) {
             ForEach(Self.weekdayHeaders, id: \.self) { label in
                 Text(label)
-                    .font(PsyFont.labelSmall)
-                    .foregroundStyle(psyColors.onSurface.opacity(0.55))
+                    .font(PsyFont.mono(11))
+                    .foregroundStyle(psyColors.text3)
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 4)
     }
 
     // MARK: - Grid
 
     private var grid: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 4) {
             ForEach(Array(vm.weeks.enumerated()), id: \.offset) { _, week in
-                HStack(spacing: 0) {
+                HStack(spacing: 4) {
                     ForEach(Array(week.enumerated()), id: \.offset) { _, cell in
                         if let cell {
                             dayCell(cell)
@@ -75,7 +96,6 @@ struct CalendarView: View {
                 }
             }
         }
-        .padding(.horizontal, 4)
     }
 
     private func dayCell(_ cell: DayCell) -> some View {
@@ -83,62 +103,50 @@ struct CalendarView: View {
         return Button {
             vm.selectDay(cell.date)
         } label: {
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
                 Text("\(cell.day)")
                     .font(PsyFont.bodyMedium)
-                    .fontWeight(cell.isToday ? .bold : .regular)
-                    .foregroundStyle(cell.isToday ? psyColors.primary : psyColors.onSurface)
-                HStack(spacing: 2) {
+                    .fontWeight(isSelected || cell.isToday ? .bold : .regular)
+                    .foregroundStyle(isSelected ? psyColors.blue : psyColors.text)
+                HStack(spacing: 3) {
                     if cell.expenseMinor > 0 {
-                        Circle().fill(CandyColor.pinkDeep).frame(width: 5, height: 5)
+                        Circle().fill(psyColors.red).frame(width: 5, height: 5)
                     }
                     if cell.incomeMinor > 0 {
-                        Circle().fill(CandyColor.green).frame(width: 5, height: 5)
+                        Circle().fill(psyColors.green).frame(width: 5, height: 5)
                     }
                 }
                 .frame(height: 5)
             }
             .frame(maxWidth: .infinity)
             .aspectRatio(1, contentMode: .fit)
-            .background(cellBackground(cell: cell, isSelected: isSelected))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .background(isSelected ? psyColors.blueSoft : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? CandyColor.violet : .clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 9)
+                    .stroke(isSelected ? psyColors.blue : .clear, lineWidth: 1.5)
             )
-            .padding(2)
         }
         .buttonStyle(.plain)
     }
 
-    private func cellBackground(cell: DayCell, isSelected: Bool) -> Color {
-        if isSelected { return CandyColor.violet.opacity(0.18) }
-        if cell.isToday { return psyColors.primary.opacity(0.12) }
-        return .clear
+    // MARK: - Day divider
+
+    private var dayDivider: some View {
+        HStack(spacing: 10) {
+            Text(dividerLabel)
+                .font(PsyFont.mono(11))
+                .foregroundStyle(psyColors.text3)
+                .fixedSize()
+            Rectangle().fill(psyColors.hair).frame(height: 1)
+        }
     }
 
-    // MARK: - Selected-day transaction list
-
-    private var dayList: some View {
-        Group {
-            if let sel = vm.selectedDay {
-                Text("Giao dịch ngày \(Self.dayMonthLabel(sel))")
-                    .font(PsyFont.titleMedium)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-
-                if vm.dayRows.isEmpty {
-                    emptyState("Không có giao dịch")
-                } else {
-                    ForEach(vm.dayRows) { row in
-                        txRow(row)
-                    }
-                }
-            } else {
-                emptyState("Chưa chọn ngày")
-            }
+    private var dividerLabel: String {
+        if let sel = vm.selectedDay {
+            return "Giao dịch · \(Self.dayMonthLabel(sel))"
         }
+        return "Giao dịch"
     }
 
     private static func dayMonthLabel(_ date: Date) -> String {
@@ -147,65 +155,43 @@ struct CalendarView: View {
         return f.string(from: date)
     }
 
-    // MARK: - Transaction row (same styling as Home, non-interactive)
+    // MARK: - Selected-day transaction list
 
-    private func txRow(_ row: TxRow) -> some View {
-        HStack(spacing: 0) {
-            ZStack {
-                Circle().fill(iconBackground(row.type))
-                Text(row.icon).font(.system(size: 22))
+    private var daySection: some View {
+        Group {
+            if vm.selectedDay != nil, !vm.dayRows.isEmpty {
+                VStack(spacing: 10) {
+                    ForEach(vm.dayRows) { row in
+                        txRow(row)
+                    }
+                }
+            } else {
+                EmptyStateView(
+                    iconName: "calendar",
+                    title: "Không có giao dịch",
+                    caption: "Chọn ngày khác hoặc thêm giao dịch."
+                )
             }
-            .frame(width: 44, height: 44)
-
-            Spacer().frame(width: 12)
-
-            VStack(alignment: .leading, spacing: 2) {
-                if row.type == .transfer {
-                    Text("\(row.accountName) → \(row.toAccountName ?? "—")")
-                        .font(PsyFont.bodyMedium)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(psyColors.onSurface)
-                } else {
-                    Text(row.title)
-                        .font(PsyFont.bodyMedium)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(psyColors.onSurface)
-                }
-                if !row.note.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Text(row.note)
-                        .font(PsyFont.labelSmall)
-                        .foregroundStyle(psyColors.onSurface.opacity(0.6))
-                        .lineLimit(1)
-                }
-                if row.type != .transfer {
-                    Text(row.accountName)
-                        .font(PsyFont.labelSmall)
-                        .foregroundStyle(psyColors.onSurface.opacity(0.45))
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer().frame(width: 8)
-
-            MoneyText(amountMinor: row.amountMinor, currency: vm.currency, prefix: amountSign(row.type))
-                .font(PsyFont.bodyMedium)
-                .fontWeight(.bold)
-                .foregroundStyle(amountColor(row.type))
         }
-        .padding(12)
-        .background(psyColors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: CandyShape.medium))
-        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
     }
 
-    private func iconBackground(_ type: TxType) -> Color {
-        switch type {
-        case .expense: return CandyColor.pinkDeep.opacity(0.15)
-        case .income: return CandyColor.green.opacity(0.15)
-        case .transfer: return psyColors.onSurface.opacity(0.08)
-        }
+    // MARK: - Transaction row (shared, same mapping as Home)
+
+    private func txRow(_ row: TxRow) -> some View {
+        let isTransfer = row.type == .transfer
+        let isIncome = row.type == .income
+        let name = isTransfer ? "\(row.accountName) → \(row.toAccountName ?? "—")" : row.title
+        let meta = row.note.trimmingCharacters(in: .whitespaces).isEmpty ? row.timeLabel : row.note
+        return TransactionRowView(
+            iconName: row.icon,
+            iconTint: psyColors.blue,
+            iconBg: psyColors.blue.opacity(0.14),
+            name: name,
+            meta: meta,
+            amount: amountSign(row.type) + vm.currency.format(row.amountMinor),
+            isIncome: isIncome,
+            account: row.accountName
+        )
     }
 
     private func amountSign(_ type: TxType) -> String {
@@ -214,21 +200,5 @@ struct CalendarView: View {
         case .income: return "+"
         case .transfer: return ""
         }
-    }
-
-    private func amountColor(_ type: TxType) -> Color {
-        switch type {
-        case .expense: return CandyColor.pinkDeep
-        case .income: return CandyColor.green
-        case .transfer: return psyColors.onSurface
-        }
-    }
-
-    private func emptyState(_ message: String) -> some View {
-        Text(message)
-            .font(PsyFont.bodyMedium)
-            .foregroundStyle(psyColors.onSurface.opacity(0.4))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
     }
 }
