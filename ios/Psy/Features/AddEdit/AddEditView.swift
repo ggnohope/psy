@@ -32,7 +32,7 @@ struct AddEditView: View {
 
                     amountSection
 
-                    if vm.type != .transfer && !vm.categories.isEmpty {
+                    if vm.type != .transfer && !vm.groups.isEmpty {
                         categorySection
                     }
 
@@ -144,51 +144,82 @@ struct AddEditView: View {
 
     // MARK: - Category picker
 
+    private let parentColumns = Array(repeating: GridItem(.flexible(), spacing: 7), count: 4)
+
     private var categorySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            EyebrowLabel(text: "Danh mục")
-
-            if let selected = selectedCategory {
-                HStack(spacing: 6) {
-                    LucideIcon(name: selected.icon, size: 16, tint: psyColors.blue)
-                    Text(selected.name)
-                        .font(PsyFont.bodyMedium.weight(.semibold))
-                        .foregroundStyle(psyColors.blue)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(psyColors.blueSoft)
-                .clipShape(Capsule())
-            }
-
-            WrapLayout(spacing: 8) {
-                ForEach(vm.categories) { category in
-                    categoryPill(category)
+            // Header row: label + live breadcrumb pill (Parent › Sub).
+            HStack {
+                EyebrowLabel(text: "Danh mục")
+                Spacer()
+                if let g = vm.selectedGroup {
+                    HStack(spacing: 6) {
+                        LucideIcon(name: vm.selectedLeaf?.icon ?? g.icon, size: 14, tint: psyColors.blue)
+                        Text(vm.selectedLeaf.map { "\(g.name) › \($0.name)" } ?? g.name)
+                            .font(PsyFont.bodyMedium.weight(.semibold))
+                            .foregroundStyle(psyColors.blue)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(psyColors.blueSoft)
+                    .clipShape(Capsule())
                 }
             }
+
+            // Picker card: parent grid + divider + subcategory pills.
+            VStack(alignment: .leading, spacing: 12) {
+                LazyVGrid(columns: parentColumns, spacing: 7) {
+                    ForEach(vm.groups) { group in
+                        parentTile(group)
+                    }
+                }
+                Rectangle().fill(psyColors.hair).frame(height: 1)
+                WrapLayout(spacing: 8) {
+                    ForEach(vm.leaves) { leaf in
+                        subPill(leaf)
+                    }
+                }
+            }
+            .padding(12)
+            .background(psyColors.surface)
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(psyColors.hair, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var selectedCategory: PsyCore.Category? {
-        vm.categories.first { $0.id == vm.selectedCategoryId }
+    private func parentTile(_ group: CategoryGroup) -> some View {
+        let isSelected = group.id == vm.selectedGroupId
+        return VStack(spacing: 5) {
+            LucideIcon(name: group.icon, size: 21, tint: isSelected ? psyColors.blue : psyColors.text2)
+            Text(group.name)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(isSelected ? psyColors.blue : psyColors.text2)
+                .lineLimit(1).minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(isSelected ? psyColors.blueSoft : psyColors.sunken)
+        .overlay(RoundedRectangle(cornerRadius: 11).stroke(isSelected ? psyColors.blue : .clear, lineWidth: 1.5))
+        .clipShape(RoundedRectangle(cornerRadius: 11))
+        .contentShape(Rectangle())
+        .onTapGesture { vm.selectGroup(group.id) }
     }
 
-    private func categoryPill(_ category: PsyCore.Category) -> some View {
-        let isSelected = category.id == vm.selectedCategoryId
+    private func subPill(_ leaf: PsyCore.Category) -> some View {
+        let isSelected = leaf.id == vm.selectedCategoryId
         return HStack(spacing: 6) {
-            LucideIcon(name: category.icon, size: 17, tint: isSelected ? .white : psyColors.text2)
-            Text(category.name)
-                .font(PsyFont.bodyMedium.weight(isSelected ? .semibold : .regular))
+            LucideIcon(name: leaf.icon, size: 17, tint: isSelected ? .white : psyColors.text2)
+            Text(leaf.name)
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(isSelected ? Color.white : psyColors.text2)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 12).padding(.vertical, 9)
         .background(isSelected ? psyColors.blue : psyColors.sunken)
-        .clipShape(RoundedRectangle(cornerRadius: PsyRadius.chip))
+        .clipShape(Capsule())
         .contentShape(Rectangle())
-        .onTapGesture { vm.selectedCategoryId = category.id }
+        .onTapGesture { vm.selectCategory(leaf.id) }
     }
 
     // MARK: - Account picker
