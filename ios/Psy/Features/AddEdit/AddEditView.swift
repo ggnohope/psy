@@ -3,109 +3,132 @@ import PhotosUI
 import PsyCore
 
 /// Add / edit a transaction. Presented as a sheet from Home. Ports AddEditTransactionScreen.kt.
+/// HostGuardIQ re-skin: Lucide chrome icons, PsyFont typography, psyColors tokens. VM untouched.
 struct AddEditView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.psyColors) private var psyColors
     @State private var vm: AddEditViewModel
     @State private var photoItem: PhotosPickerItem?
+    @State private var showDatePicker = false
+    @State private var showTimePicker = false
 
     init(container: AppContainer, txId: Int64) {
         _vm = State(initialValue: AddEditViewModel(container: container, txId: txId))
     }
 
+    // Segmented control order: income, expense, transfer.
+    private let segmentTypes: [TxType] = [.income, .expense, .transfer]
+    private let segmentLabels = ["Thu nhập", "Chi tiêu", "Chuyển khoản"]
+
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            header
             ScrollView {
-                VStack(spacing: 16) {
-                    typeToggle
+                VStack(spacing: 18) {
+                    SegmentedControl(
+                        options: segmentLabels,
+                        selectedIndex: segmentTypes.firstIndex(of: vm.type) ?? 1
+                    ) { idx in vm.onTypeChange(segmentTypes[idx]) }
+
                     amountSection
+
                     if vm.type != .transfer && !vm.categories.isEmpty {
                         categorySection
                     }
+
                     accountSections
-                    dateSection
+                    dateTimeSection
                     noteSection
                     photoSection
                     saveButton
+
                     Spacer(minLength: 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 22)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
             }
-            .background(psyColors.background)
-            .navigationTitle(vm.isEdit ? "Sửa giao dịch" : "Thêm giao dịch")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Quay lại") { dismiss() }
-                }
-                if vm.isEdit {
-                    ToolbarItem(placement: .destructiveAction) {
-                        Button {
-                            vm.delete { dismiss() }
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .tint(CandyColor.pinkDeep)
-                    }
-                }
-            }
-            .onChange(of: photoItem) { _, newItem in
-                guard let newItem else { return }
-                Task {
-                    if let data = try? await newItem.loadTransferable(type: Data.self) {
-                        vm.attachPhoto(data: data)
-                    } else {
-                        vm.photoErrorMessage = "Không thể đọc ảnh đã chọn."
-                    }
+        }
+        .background(psyColors.bg.ignoresSafeArea())
+        .onChange(of: photoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    vm.attachPhoto(data: data)
+                } else {
+                    vm.photoErrorMessage = "Không thể đọc ảnh đã chọn."
                 }
             }
         }
+        .sheet(isPresented: $showDatePicker) {
+            datePickerSheet(components: .date, title: "Chọn ngày")
+        }
+        .sheet(isPresented: $showTimePicker) {
+            datePickerSheet(components: .hourAndMinute, title: "Chọn giờ")
+        }
     }
 
-    // MARK: - Type segmented toggle
+    // MARK: - Header
 
-    private var typeToggle: some View {
-        HStack(spacing: 0) {
-            ForEach(TxType.allCases, id: \.self) { type in
-                let isSelected = type == vm.type
-                Text(typeLabel(type))
-                    .font(PsyFont.bodyMedium)
-                    .fontWeight(isSelected ? .bold : .regular)
-                    .foregroundStyle(isSelected ? Color.white : psyColors.onSurface)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(isSelected ? psyColors.primary : Color.clear)
-                    .clipShape(Capsule())
+    private var header: some View {
+        HStack(spacing: 12) {
+            Button { dismiss() } label: {
+                LucideIcon(name: "arrow-left", size: 22, tint: psyColors.text)
+                    .frame(width: 40, height: 40)
                     .contentShape(Rectangle())
-                    .onTapGesture { vm.onTypeChange(type) }
+            }
+            Text(vm.isEdit ? "Sửa giao dịch" : "Thêm giao dịch")
+                .font(PsyFont.titleLarge)
+                .foregroundStyle(psyColors.text)
+            Spacer()
+            if vm.isEdit {
+                Button { vm.delete { dismiss() } } label: {
+                    LucideIcon(name: "trash-2", size: 22, tint: psyColors.red)
+                        .frame(width: 40, height: 40)
+                        .contentShape(Rectangle())
+                }
             }
         }
-        .background(psyColors.onSurface.opacity(0.06))
-        .clipShape(Capsule())
-    }
-
-    private func typeLabel(_ type: TxType) -> String {
-        switch type {
-        case .expense: return "Chi tiêu"
-        case .income: return "Thu nhập"
-        case .transfer: return "Chuyển khoản"
-        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 10)
+        .background(psyColors.bg)
     }
 
     // MARK: - Amount
 
     private var amountSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             MoneyText(amountMinor: displayAmountMinor, currency: vm.currency)
-                .font(.system(size: 36, weight: .bold))
-                .foregroundStyle(psyColors.onSurface)
-            TextField("Số tiền", text: Binding(
+                .font(PsyFont.display(42))
+                .foregroundStyle(psyColors.text)
+            Text("Nhập số tiền")
+                .font(PsyFont.mono(12))
+                .foregroundStyle(psyColors.text3)
+
+            TextField("0", text: Binding(
                 get: { vm.amountText },
                 set: { vm.amountText = $0.filter(\.isNumber) }
             ))
             .keyboardType(.numberPad)
-            .textFieldStyle(.roundedBorder)
+            .multilineTextAlignment(.center)
+            .font(PsyFont.mono(18))
+            .foregroundStyle(psyColors.text)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .background(psyColors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: PsyRadius.chip)
+                    .stroke(amountInvalid ? psyColors.red : psyColors.hair, lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: PsyRadius.chip))
+            .padding(.top, 6)
+
+            if amountInvalid {
+                Text("Số tiền phải lớn hơn 0")
+                    .font(PsyFont.labelSmall)
+                    .foregroundStyle(psyColors.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -114,43 +137,61 @@ struct AddEditView: View {
         AddEditLogic.amountMinor(typed: vm.amountText, fractionDigits: vm.currency.fractionDigits)
     }
 
-    // MARK: - Category grid
+    /// True when the user typed something but it does not resolve to a positive amount.
+    private var amountInvalid: Bool {
+        !vm.amountText.isEmpty && displayAmountMinor <= 0
+    }
+
+    // MARK: - Category picker
 
     private var categorySection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionLabel("Danh mục")
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            EyebrowLabel(text: "Danh mục")
+
+            if let selected = selectedCategory {
+                HStack(spacing: 6) {
+                    LucideIcon(name: selected.icon, size: 16, tint: psyColors.blue)
+                    Text(selected.name)
+                        .font(PsyFont.bodyMedium.weight(.semibold))
+                        .foregroundStyle(psyColors.blue)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(psyColors.blueSoft)
+                .clipShape(Capsule())
+            }
+
+            WrapLayout(spacing: 8) {
                 ForEach(vm.categories) { category in
-                    categoryChip(category)
+                    categoryPill(category)
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func categoryChip(_ category: PsyCore.Category) -> some View {
+    private var selectedCategory: PsyCore.Category? {
+        vm.categories.first { $0.id == vm.selectedCategoryId }
+    }
+
+    private func categoryPill(_ category: PsyCore.Category) -> some View {
         let isSelected = category.id == vm.selectedCategoryId
-        return VStack(spacing: 2) {
-            Text(category.icon).font(.system(size: 22))
+        return HStack(spacing: 6) {
+            LucideIcon(name: category.icon, size: 17, tint: isSelected ? .white : psyColors.text2)
             Text(category.name)
-                .font(.system(size: 10))
-                .fontWeight(isSelected ? .bold : .regular)
-                .foregroundStyle(isSelected ? psyColors.primary : psyColors.onSurface)
+                .font(PsyFont.bodyMedium.weight(isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? Color.white : psyColors.text2)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
-        .background(isSelected ? psyColors.primary.opacity(0.15) : psyColors.onSurface.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: CandyShape.small))
-        .overlay(
-            RoundedRectangle(cornerRadius: CandyShape.small)
-                .stroke(isSelected ? psyColors.primary : .clear, lineWidth: 2)
-        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(isSelected ? psyColors.blue : psyColors.sunken)
+        .clipShape(RoundedRectangle(cornerRadius: PsyRadius.chip))
         .contentShape(Rectangle())
         .onTapGesture { vm.selectedCategoryId = category.id }
     }
 
-    // MARK: - Account chips
+    // MARK: - Account picker
 
     @ViewBuilder
     private var accountSections: some View {
@@ -161,9 +202,8 @@ struct AddEditView: View {
                 if let from = vm.selectedAccountId, let to = vm.toAccountId, from == to {
                     Text("Hai tài khoản phải khác nhau")
                         .font(PsyFont.labelSmall)
-                        .foregroundStyle(CandyColor.pinkDeep)
+                        .foregroundStyle(psyColors.red)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 4)
                 }
             } else {
                 accountSection(label: "Tài khoản", selectedId: vm.selectedAccountId) { vm.selectedAccountId = $0 }
@@ -172,60 +212,123 @@ struct AddEditView: View {
     }
 
     private func accountSection(label: String, selectedId: Int64?, onSelect: @escaping (Int64) -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionLabel(label)
-            FlowLayout(spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            EyebrowLabel(text: label)
+            WrapLayout(spacing: 8) {
                 ForEach(vm.accounts) { account in
                     accountChip(account, isSelected: account.id == selectedId) { onSelect(account.id) }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func accountChip(_ account: Account, isSelected: Bool, onSelect: @escaping () -> Void) -> some View {
-        HStack(spacing: 4) {
-            Text(account.icon).font(.system(size: 16))
+        HStack(spacing: 6) {
+            LucideIcon(name: account.icon, size: 17, tint: isSelected ? psyColors.blue : psyColors.text2)
             Text(account.name)
-                .font(.system(size: 13))
-                .fontWeight(isSelected ? .bold : .regular)
-                .foregroundStyle(isSelected ? CandyColor.green : psyColors.onSurface)
+                .font(PsyFont.bodyMedium.weight(isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? psyColors.blue : psyColors.text2)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(isSelected ? CandyColor.green.opacity(0.15) : psyColors.onSurface.opacity(0.06))
+        .padding(.vertical, 9)
+        .background(isSelected ? psyColors.blueSoft : psyColors.sunken)
         .clipShape(Capsule())
-        .overlay(Capsule().stroke(isSelected ? CandyColor.green : .clear, lineWidth: 2))
+        .overlay(Capsule().stroke(isSelected ? psyColors.blue : .clear, lineWidth: 1.5))
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
     }
 
-    // MARK: - Date
+    // MARK: - Date + time
 
-    private var dateSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            sectionLabel("Ngày")
-            DatePicker("Ngày", selection: $vm.date, displayedComponents: .date)
-                .labelsHidden()
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private var dateTimeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            EyebrowLabel(text: "Thời gian")
+            HStack(spacing: 10) {
+                readOnlyField(text: dateLabel, icon: "calendar") { showDatePicker = true }
+                readOnlyField(text: timeLabel, icon: nil) { showTimePicker = true }
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func readOnlyField(text: String, icon: String?, onTap: @escaping () -> Void) -> some View {
+        HStack(spacing: 8) {
+            if let icon {
+                LucideIcon(name: icon, size: 16, tint: psyColors.text3)
+            }
+            Text(text)
+                .font(PsyFont.mono(14))
+                .foregroundStyle(psyColors.text)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(psyColors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: PsyRadius.chip)
+                .stroke(psyColors.hair, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: PsyRadius.chip))
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+    }
+
+    private var dateLabel: String {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy"
+        return f.string(from: vm.date)
+    }
+
+    private var timeLabel: String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f.string(from: vm.date)
+    }
+
+    private func datePickerSheet(components: DatePickerComponents, title: String) -> some View {
+        VStack(spacing: 16) {
+            Text(title)
+                .font(PsyFont.titleMedium)
+                .foregroundStyle(psyColors.text)
+                .padding(.top, 20)
+            DatePicker("", selection: $vm.date, displayedComponents: components)
+                .labelsHidden()
+                .datePickerStyle(.wheel)
+            Spacer()
+        }
+        .padding(.horizontal, 22)
+        .background(psyColors.bg.ignoresSafeArea())
+        .presentationDetents([.medium])
     }
 
     // MARK: - Note
 
     private var noteSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            sectionLabel("Ghi chú")
+        VStack(alignment: .leading, spacing: 10) {
+            EyebrowLabel(text: "Ghi chú")
             TextField("Ghi chú", text: $vm.note, axis: .vertical)
                 .lineLimit(1...3)
-                .textFieldStyle(.roundedBorder)
+                .font(PsyFont.bodyMedium)
+                .foregroundStyle(psyColors.text)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(psyColors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PsyRadius.chip)
+                        .stroke(psyColors.hair, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: PsyRadius.chip))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Photo
 
     private var photoSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionLabel("Đính kèm ảnh")
+        VStack(alignment: .leading, spacing: 10) {
+            EyebrowLabel(text: "Đính kèm ảnh")
             if let uri = vm.photoUri {
                 ZStack(alignment: .topTrailing) {
                     if let img = UIImage(contentsOfFile: uri) {
@@ -233,35 +336,37 @@ struct AddEditView: View {
                             .resizable()
                             .scaledToFill()
                             .frame(width: 96, height: 96)
-                            .clipShape(RoundedRectangle(cornerRadius: CandyShape.small))
+                            .clipShape(RoundedRectangle(cornerRadius: PsyRadius.chip))
                     } else {
-                        RoundedRectangle(cornerRadius: CandyShape.small)
-                            .fill(psyColors.onSurface.opacity(0.06))
+                        RoundedRectangle(cornerRadius: PsyRadius.chip)
+                            .fill(psyColors.sunken)
                             .frame(width: 96, height: 96)
                     }
                     Button {
                         vm.removePhoto()
                         photoItem = nil
                     } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
+                        LucideIcon(name: "x", size: 13, tint: .white)
                             .frame(width: 24, height: 24)
-                            .background(Color.black.opacity(0.5))
+                            .background(Color.black.opacity(0.55))
                             .clipShape(Circle())
                     }
                     .padding(4)
                 }
             } else {
                 PhotosPicker(selection: $photoItem, matching: .images) {
-                    Text("📷  Đính kèm ảnh")
-                        .font(PsyFont.bodyMedium)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CandyShape.small)
-                                .stroke(psyColors.primary, lineWidth: 1)
-                        )
+                    HStack(spacing: 8) {
+                        LucideIcon(name: "plus", size: 17, tint: psyColors.blue)
+                        Text("Đính kèm ảnh")
+                            .font(PsyFont.bodyMedium.weight(.semibold))
+                            .foregroundStyle(psyColors.blue)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PsyRadius.chip)
+                            .stroke(psyColors.blue, lineWidth: 1)
+                    )
                 }
             }
 
@@ -269,19 +374,18 @@ struct AddEditView: View {
                 HStack {
                     Text(error)
                         .font(PsyFont.labelSmall)
-                        .foregroundStyle(CandyColor.pinkDeep)
+                        .foregroundStyle(psyColors.red)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
                         vm.photoErrorMessage = nil
                     } label: {
-                        Image(systemName: "xmark").font(.system(size: 12))
+                        LucideIcon(name: "x", size: 13, tint: psyColors.red)
                     }
-                    .tint(CandyColor.pinkDeep)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(CandyColor.pinkDeep.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .background(psyColors.redSoft)
+                .clipShape(RoundedRectangle(cornerRadius: PsyRadius.chip))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -293,64 +397,14 @@ struct AddEditView: View {
         Button {
             vm.save { dismiss() }
         } label: {
-            Text("Lưu")
-                .font(.system(size: 16, weight: .bold))
+            Text("Lưu giao dịch")
+                .font(PsyFont.labelLarge)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .background(vm.canSave ? psyColors.primary : psyColors.primary.opacity(0.4))
-                .clipShape(RoundedRectangle(cornerRadius: CandyShape.medium))
+                .background(vm.canSave ? psyColors.blue : psyColors.blue.opacity(0.4))
+                .clipShape(RoundedRectangle(cornerRadius: PsyRadius.button))
         }
         .disabled(!vm.canSave)
-    }
-
-    // MARK: - Helpers
-
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(PsyFont.bodyMedium)
-            .foregroundStyle(psyColors.onSurface.opacity(0.7))
-    }
-}
-
-/// Minimal flow layout for the account chips (mirrors Compose FlowRow).
-private struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var rows: [[CGSize]] = [[]]
-        var x: CGFloat = 0
-        for sub in subviews {
-            let size = sub.sizeThatFits(.unspecified)
-            if x + size.width > maxWidth, !rows[rows.count - 1].isEmpty {
-                rows.append([])
-                x = 0
-            }
-            rows[rows.count - 1].append(size)
-            x += size.width + spacing
-        }
-        let height = rows.reduce(0) { acc, row in
-            acc + (row.map(\.height).max() ?? 0) + spacing
-        } - (rows.isEmpty ? 0 : spacing)
-        return CGSize(width: maxWidth == .infinity ? x : maxWidth, height: max(height, 0))
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let maxWidth = bounds.width
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-        for sub in subviews {
-            let size = sub.sizeThatFits(.unspecified)
-            if x + size.width > bounds.minX + maxWidth, x > bounds.minX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            sub.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
     }
 }

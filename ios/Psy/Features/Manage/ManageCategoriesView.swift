@@ -14,16 +14,26 @@ struct ManageCategoriesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            tabToggle
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+            SegmentedControl(
+                options: ["Chi", "Thu"],
+                selectedIndex: vm.type == .expense ? 0 : 1,
+                onSelect: { vm.selectTab($0 == 0 ? .expense : .income) }
+            )
+            .padding(.horizontal, 22)
+            .padding(.vertical, 12)
             if vm.items.isEmpty {
-                emptyState
+                Spacer()
+                EmptyStateView(
+                    iconName: "list",
+                    title: "Chưa có danh mục",
+                    caption: "Thêm nhóm danh mục đầu tiên."
+                )
+                Spacer()
             } else {
                 list
             }
         }
-        .background(psyColors.background)
+        .background(psyColors.bg)
         .navigationTitle("Quản lý danh mục")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -32,7 +42,7 @@ struct ManageCategoriesView: View {
                     vm.startAdd()
                     editorOpen = true
                 } label: {
-                    Image(systemName: "plus")
+                    LucideIcon(name: "plus", size: 20, tint: psyColors.blue)
                 }
             }
         }
@@ -41,47 +51,13 @@ struct ManageCategoriesView: View {
         }
     }
 
-    private var tabToggle: some View {
-        HStack(spacing: 0) {
-            tab(.expense, "Chi")
-            tab(.income, "Thu")
-        }
-        .background(psyColors.onSurface.opacity(0.06))
-        .clipShape(Capsule())
-    }
-
-    private func tab(_ type: CategoryType, _ label: String) -> some View {
-        let isSelected = vm.type == type
-        return Text(label)
-            .font(PsyFont.bodyMedium)
-            .fontWeight(isSelected ? .bold : .regular)
-            .foregroundStyle(isSelected ? Color.white : psyColors.onSurface.opacity(0.6))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(isSelected ? psyColors.primary : Color.clear)
-            .clipShape(Capsule())
-            .contentShape(Rectangle())
-            .onTapGesture { vm.selectTab(type) }
-    }
-
-    private var emptyState: some View {
-        VStack {
-            Spacer()
-            Text("Chưa có danh mục nào.\nNhấn + để thêm mới.")
-                .font(PsyFont.bodyMedium)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(psyColors.onSurface.opacity(0.6))
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
     private var list: some View {
         List {
             ForEach(vm.items) { group in
                 CategoryRow(group: group)
-                    .listRowBackground(psyColors.background)
+                    .listRowBackground(psyColors.bg)
                     .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 5, leading: 22, bottom: 5, trailing: 22))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         vm.startEdit(group)
@@ -106,18 +82,24 @@ private struct CategoryRow: View {
     let group: CategoryGroup
 
     var body: some View {
-        HStack(spacing: 12) {
-            LucideIcon(name: group.icon, size: 20, tint: Color(argb: group.color))
-                .frame(width: 40, height: 40)
-                .background(RoundedRectangle(cornerRadius: 11).fill(Color(argb: group.color).opacity(0.14)))
+        HStack(spacing: 13) {
+            IconTile(
+                iconName: group.icon,
+                tint: Color(argb: group.color),
+                bg: Color(argb: group.color).opacity(0.14),
+                size: 44
+            )
             Text(group.name)
-                .font(PsyFont.titleMedium)
-                .foregroundStyle(psyColors.onSurface)
+                .font(PsyFont.bodyLarge.weight(.semibold))
+                .foregroundStyle(psyColors.text)
             Spacer()
+            LucideIcon(name: "chevron-right", size: 18, tint: psyColors.text3)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: CandyShape.small).fill(psyColors.surface))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .background(psyColors.surface)
+        .overlay(RoundedRectangle(cornerRadius: PsyRadius.card).stroke(psyColors.hair, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: PsyRadius.card))
     }
 }
 
@@ -133,23 +115,27 @@ private struct CategoryEditorSheet: View {
                     TextField("Tên danh mục", text: $vm.draftName)
                         .textFieldStyle(.roundedBorder)
 
-                    Text("Biểu tượng").font(PsyFont.bodyMedium).foregroundStyle(psyColors.onSurface.opacity(0.7))
+                    Text("Biểu tượng").font(PsyFont.bodyMedium).foregroundStyle(psyColors.text2)
                     IconPicker(selected: vm.draftIcon) { vm.draftIcon = $0 }
 
-                    Text("Màu sắc").font(PsyFont.bodyMedium).foregroundStyle(psyColors.onSurface.opacity(0.7))
+                    Text("Màu sắc").font(PsyFont.bodyMedium).foregroundStyle(psyColors.text2)
                     ColorPicker(selected: vm.draftColor) { vm.draftColor = $0 }
                 }
-                .padding(16)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 16)
             }
-            .background(psyColors.background)
+            .background(psyColors.bg)
             .navigationTitle(vm.editingId == nil ? "Thêm danh mục" : "Sửa danh mục")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Huỷ") { onDone() }
+                        .foregroundStyle(psyColors.text2)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Lưu") { vm.save(); onDone() }
+                        .foregroundStyle(psyColors.blue)
+                        .fontWeight(.semibold)
                         .disabled(vm.draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }

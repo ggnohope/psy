@@ -41,28 +41,4 @@ enum AccentPalette: String, CaseIterable, Codable {
         }
     }
 
-    // Legacy compatibility (used by AppearanceView swatch until re-skinned).
-    var colors: AccentColors { AccentColors(primary: primary(dark: false), secondary: Color(argb: 0xFF0BB3B0), tertiary: Color(argb: 0xFFF59E0B)) }
-}
-
-struct AccentColors {
-    let primary: Color
-    let secondary: Color
-    let tertiary: Color
-}
-
-/// TEMPORARY bridge during the HostGuardIQ redesign — old Candy color names remapped to
-/// the closest HostGuardIQ token so existing views compile before they are re-skinned.
-/// Remove once no view references CandyColor.
-enum CandyColor {
-    static let violet     = Color(argb: 0xFF0A7CF6) // → blue
-    static let sky        = Color(argb: 0xFF0BB3B0) // → teal
-    static let pink       = Color(argb: 0xFFF59E0B) // → amber
-    static let pinkDeep   = Color(argb: 0xFFE0413A) // → red (expense/danger)
-    static let green      = Color(argb: 0xFF1F9D62) // → green (income)
-
-    static let surfaceLight   = Color(argb: 0xFFF7F9FC)
-    static let onSurfaceLight  = Color(argb: 0xFF0A2540)
-    static let surfaceDark     = Color(argb: 0xFF061A30)
-    static let onSurfaceDark   = Color(argb: 0xFFEEF2F8)
 }

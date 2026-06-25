@@ -40,14 +40,6 @@ struct PsyColors {
     static let brandExpenseTint = Color(argb: 0xFFF8A09B)
     static let heroColors: [Color] = [Color(argb: 0xFF103458), Color(argb: 0xFF0A2540), Color(argb: 0xFF061A30)]
 
-    // Legacy aliases (used by not-yet-re-skinned views; remove as views migrate).
-    var primary: Color { blue }
-    var secondary: Color { teal }
-    var tertiary: Color { amber }
-    var onSurface: Color { text }
-    var background: Color { bg }
-    var onBackground: Color { text }
-
     // Hoisted palette constants — keeps resolve() a fast set of member references
     // (avoids the Swift type-checker timeout on a big inline initializer).
     private enum L {
