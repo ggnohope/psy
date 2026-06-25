@@ -28,9 +28,7 @@ class SettingsRepositoryImpl @Inject constructor(
             themeMode = runCatching {
                 ThemeMode.valueOf(p[KEY_MODE] ?: "SYSTEM")
             }.getOrDefault(ThemeMode.SYSTEM),
-            accent = runCatching {
-                AccentPalette.valueOf(p[KEY_ACCENT] ?: "CANDY_VIOLET")
-            }.getOrDefault(AccentPalette.CANDY_VIOLET),
+            accent = parseAccent(p[KEY_ACCENT]),
             lockEnabled = p[KEY_LOCK] ?: false,
             pinHash = p[KEY_PIN_HASH],
             biometricEnabled = p[KEY_BIO] ?: false,
@@ -64,6 +62,14 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun verifyPin(pin: String): Boolean {
         val current = settings.first().pinHash
         return current != null && current == sha256("psy_salt:$pin")
+    }
+
+    /** Tolerant parse: migrate legacy candy accent values to the HostGuardIQ palette. */
+    private fun parseAccent(raw: String?): AccentPalette = when (raw) {
+        "BLUE", "AMBER", "TEAL" -> AccentPalette.valueOf(raw)
+        "CANDY_PINK" -> AccentPalette.AMBER   // closest warm hue
+        "CANDY_MINT" -> AccentPalette.TEAL
+        else -> AccentPalette.BLUE            // CANDY_VIOLET, null, or unknown
     }
 
     private fun sha256(input: String): String {

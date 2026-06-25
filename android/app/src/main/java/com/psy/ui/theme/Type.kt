@@ -15,18 +15,31 @@ private val provider = GoogleFont.Provider(
     certificates = R.array.com_google_android_gms_fonts_certs,
 )
 
-private val quicksandFont = GoogleFont("Quicksand")
+private val spaceGrotesk = GoogleFont("Space Grotesk")
+private val plexSans = GoogleFont("IBM Plex Sans")
+private val plexMono = GoogleFont("IBM Plex Mono")
 
-val Quicksand: FontFamily = FontFamily(
-    Font(googleFont = quicksandFont, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = quicksandFont, fontProvider = provider, weight = FontWeight.SemiBold),
-    Font(googleFont = quicksandFont, fontProvider = provider, weight = FontWeight.Bold),
-    Font(googleFont = quicksandFont, fontProvider = provider, weight = FontWeight.ExtraBold),
+val SpaceGrotesk = FontFamily(
+    Font(googleFont = spaceGrotesk, fontProvider = provider, weight = FontWeight.Medium),
+    Font(googleFont = spaceGrotesk, fontProvider = provider, weight = FontWeight.SemiBold),
+    Font(googleFont = spaceGrotesk, fontProvider = provider, weight = FontWeight.Bold),
+)
+val PlexSans = FontFamily(
+    Font(googleFont = plexSans, fontProvider = provider, weight = FontWeight.Normal),
+    Font(googleFont = plexSans, fontProvider = provider, weight = FontWeight.Medium),
+    Font(googleFont = plexSans, fontProvider = provider, weight = FontWeight.SemiBold),
+)
+val PlexMono = FontFamily(
+    Font(googleFont = plexMono, fontProvider = provider, weight = FontWeight.SemiBold),
 )
 
-val CandyTypography = Typography(
-    headlineMedium = TextStyle(fontFamily = Quicksand, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp),
-    titleMedium = TextStyle(fontFamily = Quicksand, fontWeight = FontWeight.Bold, fontSize = 16.sp),
-    bodyMedium = TextStyle(fontFamily = Quicksand, fontWeight = FontWeight.Medium, fontSize = 14.sp),
-    labelSmall = TextStyle(fontFamily = Quicksand, fontWeight = FontWeight.SemiBold, fontSize = 11.sp),
+/** Body/UI = IBM Plex Sans; display slots use Space Grotesk; eyebrows/time use IBM Plex Mono. */
+val PsyTypography = Typography(
+    headlineMedium = TextStyle(fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 28.sp),
+    titleLarge = TextStyle(fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 20.sp),
+    titleMedium = TextStyle(fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
+    bodyLarge = TextStyle(fontFamily = PlexSans, fontWeight = FontWeight.Normal, fontSize = 16.sp),
+    bodyMedium = TextStyle(fontFamily = PlexSans, fontWeight = FontWeight.Normal, fontSize = 14.sp),
+    labelLarge = TextStyle(fontFamily = PlexSans, fontWeight = FontWeight.SemiBold, fontSize = 16.sp),
+    labelSmall = TextStyle(fontFamily = PlexMono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = 1.6.sp),
 )

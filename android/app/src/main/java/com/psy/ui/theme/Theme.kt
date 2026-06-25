@@ -1,43 +1,19 @@
 package com.psy.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
 import com.psy.data.settings.AccentPalette
 import com.psy.data.settings.ThemeMode
-
-private fun colorSchemeFor(accent: AccentPalette, dark: Boolean): ColorScheme {
-    val colors = accentColorsFor(accent)
-    return if (dark) {
-        darkColorScheme(
-            primary = colors.primary,
-            secondary = colors.secondary,
-            tertiary = colors.tertiary,
-            surface = SurfaceDark,
-            onSurface = OnSurfaceDark,
-            background = SurfaceDark,
-            onBackground = OnSurfaceDark,
-        )
-    } else {
-        lightColorScheme(
-            primary = colors.primary,
-            secondary = colors.secondary,
-            tertiary = colors.tertiary,
-            surface = SurfaceLight,
-            onSurface = OnSurfaceLight,
-            background = SurfaceLight,
-            onBackground = OnSurfaceLight,
-        )
-    }
-}
 
 @Composable
 fun PsyTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
-    accent: AccentPalette = AccentPalette.CANDY_VIOLET,
+    accent: AccentPalette = AccentPalette.BLUE,
     content: @Composable () -> Unit,
 ) {
     val dark = when (themeMode) {
@@ -45,10 +21,35 @@ fun PsyTheme(
         ThemeMode.LIGHT  -> false
         ThemeMode.DARK   -> true
     }
-    MaterialTheme(
-        colorScheme = colorSchemeFor(accent, dark),
-        typography = CandyTypography,
-        shapes = CandyShapes,
-        content = content,
+    val base = if (dark) DarkPsyColors else LightPsyColors
+    val psyColors = base.copy(
+        blue = accentPrimary(accent, dark),
+        blueSoft = accentSoft(accent, dark),
     )
+    // Material3 scheme for built-in widgets; mapped onto our tokens.
+    val scheme = if (dark) {
+        darkColorScheme(
+            primary = psyColors.blue, onPrimary = Color.White,
+            surface = psyColors.surface, onSurface = psyColors.text,
+            background = psyColors.bg, onBackground = psyColors.text,
+            surfaceVariant = psyColors.sunken, outline = psyColors.hair,
+            error = psyColors.red,
+        )
+    } else {
+        lightColorScheme(
+            primary = psyColors.blue, onPrimary = Color.White,
+            surface = psyColors.surface, onSurface = psyColors.text,
+            background = psyColors.bg, onBackground = psyColors.text,
+            surfaceVariant = psyColors.sunken, outline = psyColors.hair,
+            error = psyColors.red,
+        )
+    }
+    CompositionLocalProvider(LocalPsyColors provides psyColors) {
+        MaterialTheme(
+            colorScheme = scheme,
+            typography = PsyTypography,
+            shapes = PsyShapes,
+            content = content,
+        )
+    }
 }
