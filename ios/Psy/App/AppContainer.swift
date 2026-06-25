@@ -12,6 +12,7 @@ final class AppContainer {
 
     let ledgerRepo: LedgerRepository
     let accountRepo: AccountRepository
+    let categoryGroupRepo: CategoryGroupRepository
     let categoryRepo: CategoryRepository
     let transactionRepo: TransactionRepository
     let budgetRepo: BudgetRepository
@@ -32,12 +33,14 @@ final class AppContainer {
 
         ledgerRepo = LedgerRepository(context: context, bus: bus, ids: ids)
         accountRepo = AccountRepository(context: context, bus: bus, ids: ids)
+        categoryGroupRepo = CategoryGroupRepository(context: context, bus: bus, ids: ids)
         categoryRepo = CategoryRepository(context: context, bus: bus, ids: ids)
         transactionRepo = TransactionRepository(context: context, bus: bus, ids: ids)
         budgetRepo = BudgetRepository(context: context, bus: bus, ids: ids)
 
         snapshotManager = SnapshotManager(context: context, bus: bus)
-        seeder = DefaultDataSeeder(ledgerRepo: ledgerRepo, accountRepo: accountRepo, categoryRepo: categoryRepo)
+        seeder = DefaultDataSeeder(ledgerRepo: ledgerRepo, accountRepo: accountRepo,
+                                   categoryGroupRepo: categoryGroupRepo, categoryRepo: categoryRepo)
 
         tokenStore = TokenStore()
         settingsStore = SettingsStore()

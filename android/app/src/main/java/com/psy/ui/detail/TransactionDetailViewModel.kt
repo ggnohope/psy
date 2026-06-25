@@ -91,7 +91,7 @@ class TransactionDetailViewModel @Inject constructor(
             return@combine TransactionDetailUiState(
                 loading = false,
                 found = true,
-                icon = "🔁",
+                icon = "arrow-right-left",
                 title = account?.name ?: "Chuyển khoản",
                 ledgerName = ledger?.name ?: "",
                 dateLabel = dateLabel,

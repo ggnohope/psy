@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.aspectRatio
@@ -20,71 +21,70 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-private val EMOJI_LIST = listOf(
-    "🍜", "🚌", "🛍️", "🧾", "🎮", "💊",
-    "📦", "💰", "🎁", "🏠", "🚗", "☕",
-    "🍺", "👕", "🏥", "🎬", "📱", "✈️",
-    "🎓", "🐶", "💵", "🏦", "💳", "🪙",
-    "📈", "🎀", "🧴", "🍔", "🍰", "🚕",
-    "⛽", "🏋️", "🎵", "🛒", "☂️", "🎈",
-)
+import com.psy.ui.icons.LucideIcon
+import com.psy.ui.icons.LucideIcons
+import com.psy.ui.theme.LocalPsyColors
 
 private val COLOR_PALETTE: List<Long> = listOf(
-    0xFFA18CFF, 0xFF7FD8FF, 0xFFFF8FD6, 0xFFFF5FA2, 0xFF22C55E,
-    0xFFFFB86B, 0xFF6BCB77, 0xFF4D96FF, 0xFFFF6B6B, 0xFFB088F9,
+    0xFF0A7CF6, 0xFFF59E0B, 0xFF0BB3B0, 0xFF1F9D62, 0xFFE0413A,
+    0xFF3D97F8, 0xFFFBB43D, 0xFF19E3E0, 0xFF5B6B80, 0xFF0A2540,
 )
 
-// 6 columns × 6 rows = 36 emojis, each cell 48dp → grid height = 288dp
-private val GRID_HEIGHT = (6 * 48).dp
-
+/**
+ * Searchable Lucide icon picker (replaces the old fixed-emoji grid).
+ * `selected`/`onPick` are Lucide name strings (e.g. "shopping-bag").
+ */
 @Composable
-fun EmojiPicker(
+fun IconPicker(
     selected: String,
     onPick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(6),
-        userScrollEnabled = false,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(GRID_HEIGHT),
-    ) {
-        items(EMOJI_LIST) { emoji ->
-            val isSelected = emoji == selected
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                        else Color.Transparent,
-                    )
-                    .border(
-                        width = if (isSelected) 2.dp else 0.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                    .clickable { onPick(emoji) }
-                    .padding(4.dp),
-            ) {
-                Text(
-                    text = emoji,
-                    fontSize = 22.sp,
-                    textAlign = TextAlign.Center,
-                )
+    val colors = LocalPsyColors.current
+    var query by remember { mutableStateOf("") }
+    val items = remember(query) {
+        if (query.isBlank()) LucideIcons.pickerSet
+        else LucideIcons.pickerSet.filter { it.contains(query.trim(), ignoreCase = true) }
+    }
+    Column(modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            singleLine = true,
+            placeholder = { Text("Tìm biểu tượng") },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        )
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(6),
+            userScrollEnabled = false,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().height((6 * 52).dp),
+        ) {
+            items(items) { name ->
+                val isSelected = name == selected
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isSelected) colors.blueSoft else colors.sunken)
+                        .clickable { onPick(name) },
+                ) {
+                    LucideIcon(name, tint = if (isSelected) colors.blue else colors.text2, size = 22.dp)
+                }
             }
         }
     }

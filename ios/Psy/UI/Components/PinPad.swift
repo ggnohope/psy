@@ -11,10 +11,10 @@ struct PinDots: View {
         HStack(spacing: 18) {
             ForEach(0..<total, id: \.self) { i in
                 Circle()
-                    .fill(i < filled ? colors.primary : Color.clear)
+                    .fill(i < filled ? colors.blue : Color.clear)
                     .frame(width: 16, height: 16)
                     .overlay(
-                        Circle().stroke(colors.primary.opacity(i < filled ? 0 : 0.35), lineWidth: 1.5)
+                        Circle().stroke(colors.blue.opacity(i < filled ? 0 : 0.35), lineWidth: 1.5)
                     )
             }
         }
@@ -22,8 +22,8 @@ struct PinDots: View {
     }
 }
 
-/// Candy Pop numeric keypad: 1–9 then [biometric | 0 | ⌫]. `showBiometric` toggles the
-/// Face ID key (used on the lock screen, hidden when creating a PIN).
+/// HostGuardIQ numeric keypad: 1–9 then [biometric | 0 | delete]. `showBiometric` toggles
+/// the biometric key (used on the lock screen, hidden when creating a PIN).
 struct PinKeypad: View {
     var showBiometric: Bool = false
     let onDigit: (String) -> Void
@@ -46,12 +46,10 @@ struct PinKeypad: View {
             HStack(spacing: 24) {
                 if showBiometric {
                     Button(action: onBiometric) {
-                        Image(systemName: "faceid")
-                            .font(.system(size: 28))
-                            .foregroundStyle(colors.primary)
+                        LucideIcon(name: "fingerprint", size: 28, tint: colors.blue)
                             .frame(width: keySize, height: keySize)
                     }
-                    .accessibilityLabel("Mở bằng khuôn mặt")
+                    .accessibilityLabel("Mở bằng sinh trắc học")
                 } else {
                     Color.clear.frame(width: keySize, height: keySize)
                 }
@@ -59,9 +57,7 @@ struct PinKeypad: View {
                 digitKey("0")
 
                 Button(action: onDelete) {
-                    Image(systemName: "delete.left")
-                        .font(.system(size: 24))
-                        .foregroundStyle(colors.onBackground.opacity(0.7))
+                    LucideIcon(name: "delete", size: 24, tint: colors.text2)
                         .frame(width: keySize, height: keySize)
                 }
                 .accessibilityLabel("Xoá")
@@ -73,9 +69,9 @@ struct PinKeypad: View {
         Button { onDigit(label) } label: {
             Text(label)
                 .font(PsyFont.headlineMedium)
-                .foregroundStyle(colors.onSurface)
+                .foregroundStyle(colors.text)
                 .frame(width: keySize, height: keySize)
-                .background(Circle().fill(colors.primary.opacity(0.10)))
+                .background(Circle().fill(colors.blue.opacity(0.10)))
         }
     }
 }

@@ -19,13 +19,13 @@ final class BudgetRepository {
         }.eraseToAnyPublisher()
     }
 
-    /// Upserts the single total (categoryId == nil) or per-category budget, reusing the
-    /// existing row's id so there is at most one budget per (ledger, category|total).
-    func setBudget(ledgerId: Int64, categoryId: Int64?, amountMinor: Int64) {
-        let existing = findExisting(ledgerId: ledgerId, categoryId: categoryId)
+    /// Upserts the single total (groupId == nil) or per-group budget, reusing the
+    /// existing row's id so there is at most one budget per (ledger, group|total).
+    func setBudget(ledgerId: Int64, groupId: Int64?, amountMinor: Int64) {
+        let existing = findExisting(ledgerId: ledgerId, groupId: groupId)
         let id = existing?.id ?? ids.nextId(BudgetEntity.self, idKeyPath: \.id, sortDescending: SortDescriptor(\.id, order: .reverse))
         if let existing { existing.amountMinor = amountMinor }
-        else { context.insert(BudgetEntity(id: id, ledgerId: ledgerId, categoryId: categoryId, amountMinor: amountMinor)) }
+        else { context.insert(BudgetEntity(id: id, ledgerId: ledgerId, groupId: groupId, amountMinor: amountMinor)) }
         try? context.save()
         bus.notify(.budgets)
     }
@@ -39,12 +39,12 @@ final class BudgetRepository {
         }
     }
 
-    private func findExisting(ledgerId: Int64, categoryId: Int64?) -> BudgetEntity? {
+    private func findExisting(ledgerId: Int64, groupId: Int64?) -> BudgetEntity? {
         var d: FetchDescriptor<BudgetEntity>
-        if let categoryId {
-            d = FetchDescriptor<BudgetEntity>(predicate: #Predicate { $0.ledgerId == ledgerId && $0.categoryId == categoryId })
+        if let groupId {
+            d = FetchDescriptor<BudgetEntity>(predicate: #Predicate { $0.ledgerId == ledgerId && $0.groupId == groupId })
         } else {
-            d = FetchDescriptor<BudgetEntity>(predicate: #Predicate { $0.ledgerId == ledgerId && $0.categoryId == nil })
+            d = FetchDescriptor<BudgetEntity>(predicate: #Predicate { $0.ledgerId == ledgerId && $0.groupId == nil })
         }
         d.fetchLimit = 1
         return (try? context.fetch(d))?.first

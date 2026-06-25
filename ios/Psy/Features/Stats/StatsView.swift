@@ -1,9 +1,9 @@
 import SwiftUI
 import PsyCore
 
-/// Stats screen: month selector, account filter chips, gradient summary card,
-/// per-account comparison, Chi/Thu pie-mode toggle, donut + legend, top list, 6-month trend.
-/// Ports StatsScreen.kt with Candy Pop styling + Swift Charts.
+/// Stats screen: month selector, account filter, hero summary card, per-account comparison,
+/// Chi/Thu pie-mode toggle, donut + legend, top list, 6-month trend.
+/// HostGuardIQ re-skin — visuals only; behavior + StatsViewModel bindings unchanged.
 struct StatsView: View {
     let container: AppContainer
     @Environment(\.psyColors) private var psyColors
@@ -15,129 +15,131 @@ struct StatsView: View {
     }
 
     private var pieTotal: Int64 { vm.slices.reduce(0) { $0 + $1.amountMinor } }
-    private var centerLabel: String { pieTotal > 0 ? vm.currency.format(pieTotal) : "—" }
+
+    // MARK: - Account filter mapping (Tất cả / Tiền mặt / Ngân hàng ↔ VM accountId)
+
+    private var cashAccount: Account? { vm.accounts.first { $0.type == .cash } }
+    private var bankAccount: Account? { vm.accounts.first { $0.type == .bank } }
+
+    private var filterIndex: Int {
+        guard let id = vm.selectedAccountId else { return 0 }
+        if id == cashAccount?.id { return 1 }
+        if id == bankAccount?.id { return 2 }
+        return 0
+    }
+
+    private func selectFilter(_ index: Int) {
+        switch index {
+        case 1: vm.selectAccount(cashAccount?.id)
+        case 2: vm.selectAccount(bankAccount?.id)
+        default: vm.selectAccount(nil)
+        }
+    }
+
+    private var hasData: Bool {
+        !vm.slices.isEmpty || !vm.top.isEmpty || vm.summary.incomeMinor != 0 || vm.summary.expenseMinor != 0
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 22) {
+                    header
+
                     MonthSelector(label: vm.monthLabel, onPrev: vm.prevMonth, onNext: vm.nextMonth)
                         .frame(maxWidth: .infinity)
 
                     if !vm.accounts.isEmpty {
-                        accountChipRow
+                        SegmentedControl(options: ["Tất cả", "Tiền mặt", "Ngân hàng"],
+                                         selectedIndex: filterIndex,
+                                         onSelect: selectFilter)
                     }
 
                     summaryCard
 
-                    if vm.selectedAccountId == nil {
-                        accountBreakdownCard
+                    if hasData {
+                        if vm.selectedAccountId == nil {
+                            accountBreakdownSection
+                        }
+
+                        SegmentedControl(options: ["Chi tiêu", "Thu nhập"],
+                                         selectedIndex: vm.pieMode == .expense ? 0 : 1,
+                                         onSelect: { vm.setPieMode($0 == 0 ? .expense : .income) })
+
+                        donutSection
+                        topSection
+                        trendSection
+                    } else {
+                        EmptyStateView(iconName: "chart-column",
+                                       title: "Chưa có dữ liệu",
+                                       caption: "Thêm giao dịch để xem thống kê.")
                     }
-
-                    pieModeToggle
-
-                    donutSection
-
-                    topSection
-
-                    trendSection
 
                     Spacer(minLength: 24)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 12)
             }
-            .background(psyColors.background.ignoresSafeArea())
-            .navigationTitle("Thống kê")
+            .background(psyColors.bg.ignoresSafeArea())
+            .navigationBarHidden(true)
         }
     }
 
-    // MARK: - Account filter chips
+    // MARK: - Header
 
-    private var accountChipRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                accountChip(label: "Tất cả", selected: vm.selectedAccountId == nil) { vm.selectAccount(nil) }
-                ForEach(vm.accounts) { account in
-                    accountChip(label: "\(account.icon) \(account.name)",
-                                selected: vm.selectedAccountId == account.id) { vm.selectAccount(account.id) }
-                }
-            }
-        }
-    }
-
-    private func accountChip(label: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(PsyFont.bodyMedium)
-                .lineLimit(1)
-                .foregroundStyle(selected ? .white : psyColors.onSurface.opacity(0.7))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(selected ? psyColors.primary : psyColors.onSurface.opacity(0.08))
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Summary card (gradient)
-
-    private var summaryCard: some View {
-        VStack(spacing: 12) {
-            HStack {
-                summaryItem("Thu", vm.summary.incomeMinor)
-                summaryItem("Chi", vm.summary.expenseMinor)
-            }
-            HStack {
-                summaryItem("Chênh lệch", vm.summary.netMinor)
-                summaryItem("TB ngày", vm.summary.avgPerDayMinor)
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(colors: [CandyColor.violet, CandyColor.sky],
-                           startPoint: .leading, endPoint: .trailing)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-    }
-
-    private func summaryItem(_ label: String, _ amountMinor: Int64) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(PsyFont.labelSmall)
-                .foregroundStyle(.white.opacity(0.8))
-            Text(vm.currency.format(amountMinor))
-                .font(PsyFont.bodyMedium)
-                .fontWeight(.bold)
-                .foregroundStyle(.white)
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            EyebrowLabel(text: "Phân tích")
+            Text("Thống kê")
+                .font(PsyFont.headlineMedium)
+                .foregroundStyle(psyColors.text)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Per-account comparison card
+    // MARK: - Hero summary card (navy gradient, 2x2 grid)
 
-    private var accountBreakdownCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("💜 Theo tài khoản")
-                    .font(PsyFont.titleMedium)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(psyColors.onSurface)
-                Spacer()
-                HStack(spacing: 4) {
-                    legendDot(CandyColor.green)
-                    Text("Thu").font(PsyFont.labelSmall).foregroundStyle(psyColors.onSurface.opacity(0.7))
-                    Spacer().frame(width: 6)
-                    legendDot(CandyColor.pinkDeep)
-                    Text("Chi").font(PsyFont.labelSmall).foregroundStyle(psyColors.onSurface.opacity(0.7))
+    private var summaryCard: some View {
+        HeroCard {
+            VStack(spacing: 18) {
+                HStack(spacing: 18) {
+                    summaryItem("Thu", vm.summary.incomeMinor, tint: psyColors.incomeTint)
+                    summaryItem("Chi", vm.summary.expenseMinor, tint: psyColors.expenseTint)
+                }
+                HStack(spacing: 18) {
+                    summaryItem("Chênh lệch", vm.summary.netMinor, tint: .white)
+                    summaryItem("TB ngày", vm.summary.avgPerDayMinor, tint: .white)
                 }
             }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func summaryItem(_ label: String, _ amountMinor: Int64, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(PsyFont.mono(11))
+                .tracking(1.4)
+                .foregroundStyle(.white.opacity(0.55))
+            Text(vm.currency.format(amountMinor))
+                .font(PsyFont.display(20))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Per-account comparison
+
+    private var accountBreakdownSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            EyebrowLabel(text: "Theo tài khoản")
 
             if vm.accountBreakdown.isEmpty {
                 Text("Kỳ này chưa có giao dịch theo tài khoản")
                     .font(PsyFont.bodyMedium)
-                    .foregroundStyle(psyColors.onSurface.opacity(0.6))
+                    .foregroundStyle(psyColors.text3)
             } else {
                 let maxValue = max(1, vm.accountBreakdown.map { max($0.incomeMinor, $0.expenseMinor) }.max() ?? 1)
                 ForEach(vm.accountBreakdown) { stat in
@@ -145,104 +147,89 @@ struct StatsView: View {
                 }
             }
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(psyColors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
     private func accountBreakdownRow(_ stat: AccountStat, maxValue: Int64) -> some View {
-        Button { vm.selectAccount(stat.id) } label: {
-            HStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(argb: stat.color).opacity(0.18))
-                    Text(stat.icon).font(PsyFont.bodyMedium)
-                }
-                .frame(width: 36, height: 36)
+        let isCash = vm.accounts.first { $0.id == stat.id }?.type == .cash
+        let tileTint = isCash ? psyColors.green : psyColors.blue
+        return Button { vm.selectAccount(stat.id) } label: {
+            HStack(spacing: 13) {
+                IconTile(iconName: stat.icon, tint: tileTint, bg: tileTint.opacity(0.14), size: 42)
 
-                VStack(spacing: 3) {
+                VStack(spacing: 7) {
                     HStack {
                         Text(stat.name)
-                            .font(PsyFont.bodyMedium)
-                            .fontWeight(.medium)
+                            .font(PsyFont.bodyLarge.weight(.semibold))
                             .lineLimit(1)
-                            .foregroundStyle(psyColors.onSurface)
+                            .foregroundStyle(psyColors.text)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Text(vm.currency.format(stat.netMinor))
-                            .font(PsyFont.labelSmall)
-                            .fontWeight(.bold)
-                            .foregroundStyle(stat.netMinor >= 0 ? CandyColor.green : CandyColor.pinkDeep)
+                            .font(PsyFont.display(15))
+                            .foregroundStyle(stat.netMinor >= 0 ? psyColors.green : psyColors.red)
                     }
-                    barLine(fraction: Double(stat.incomeMinor) / Double(maxValue), color: CandyColor.green)
-                    barLine(fraction: Double(stat.expenseMinor) / Double(maxValue), color: CandyColor.pinkDeep)
+                    barLine(fraction: Double(stat.incomeMinor) / Double(maxValue), color: psyColors.green, height: 6)
+                    barLine(fraction: Double(stat.expenseMinor) / Double(maxValue), color: psyColors.red, height: 6)
                 }
             }
-            .padding(.vertical, 4)
+            .padding(14)
+            .background(psyColors.surface)
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(psyColors.hair, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
     }
 
-    private func barLine(fraction: Double, color: Color) -> some View {
+    private func barLine(fraction: Double, color: Color, height: CGFloat) -> some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(psyColors.onSurface.opacity(0.08))
+                Capsule().fill(psyColors.sunken)
                 Capsule().fill(color)
                     .frame(width: geo.size.width * min(max(fraction, 0), 1))
             }
         }
-        .frame(height: 6)
-    }
-
-    // MARK: - Pie-mode toggle
-
-    private var pieModeToggle: some View {
-        HStack(spacing: 0) {
-            toggleItem("Chi tiêu", selected: vm.pieMode == .expense) { vm.setPieMode(.expense) }
-            toggleItem("Thu nhập", selected: vm.pieMode == .income) { vm.setPieMode(.income) }
-        }
-        .padding(4)
-        .background(psyColors.onSurface.opacity(0.08))
-        .clipShape(Capsule())
-    }
-
-    private func toggleItem(_ label: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(PsyFont.bodyMedium)
-                .foregroundStyle(selected ? .white : psyColors.onSurface.opacity(0.7))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(selected ? psyColors.primary : .clear)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
+        .frame(height: height)
     }
 
     // MARK: - Donut + legend
 
     private var donutSection: some View {
-        VStack(spacing: 8) {
-            DonutChart(slices: vm.slices, centerLabel: centerLabel)
-                .frame(maxWidth: .infinity)
+        VStack(spacing: 14) {
+            ZStack {
+                DonutChart(slices: vm.slices, centerLabel: "")
+                VStack(spacing: 2) {
+                    Text((vm.pieMode == .expense ? "Chi tiêu" : "Thu nhập").uppercased())
+                        .font(PsyFont.mono(11))
+                        .tracking(1.2)
+                        .foregroundStyle(psyColors.text3)
+                    Text(pieTotal > 0 ? vm.currency.format(pieTotal) : "—")
+                        .font(PsyFont.display(18))
+                        .foregroundStyle(psyColors.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
+            }
+            .frame(maxWidth: .infinity)
 
             if vm.slices.isEmpty {
                 Text("Không có dữ liệu cho tháng này")
                     .font(PsyFont.bodyMedium)
-                    .foregroundStyle(psyColors.onSurface.opacity(0.6))
+                    .foregroundStyle(psyColors.text3)
             } else {
-                VStack(spacing: 4) {
+                VStack(spacing: 8) {
                     ForEach(vm.slices) { slice in
                         let percent = pieTotal > 0 ? Int(Double(slice.amountMinor) / Double(pieTotal) * 100) : 0
-                        HStack {
-                            Circle().fill(Color(argb: slice.color)).frame(width: 12, height: 12)
+                        HStack(spacing: 10) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color(argb: slice.color))
+                                .frame(width: 10, height: 10)
                             Text(slice.name)
-                                .font(PsyFont.labelSmall)
-                                .foregroundStyle(psyColors.onSurface)
+                                .font(PsyFont.bodyMedium)
+                                .foregroundStyle(psyColors.text2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Text("\(percent)%")
-                                .font(PsyFont.labelSmall)
-                                .foregroundStyle(psyColors.onSurface.opacity(0.6))
+                                .font(PsyFont.mono(11))
+                                .foregroundStyle(psyColors.text3)
                         }
                     }
                 }
@@ -254,16 +241,13 @@ struct StatsView: View {
     // MARK: - Top list
 
     private var topSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(vm.pieMode == .expense ? "Top chi tiêu" : "Top thu nhập")
-                .font(PsyFont.titleMedium)
-                .fontWeight(.semibold)
-                .foregroundStyle(psyColors.onSurface)
+        VStack(alignment: .leading, spacing: 12) {
+            EyebrowLabel(text: vm.pieMode == .expense ? "Top chi tiêu" : "Top thu nhập")
 
             if vm.top.isEmpty {
                 Text("Không có danh mục nào trong tháng này")
                     .font(PsyFont.bodyMedium)
-                    .foregroundStyle(psyColors.onSurface.opacity(0.6))
+                    .foregroundStyle(psyColors.text3)
             } else {
                 ForEach(vm.top) { entry in
                     topEntryRow(entry)
@@ -273,47 +257,50 @@ struct StatsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func topEntryRow(_ entry: TopEntry) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("\(entry.category.icon) \(entry.category.name)")
-                    .font(PsyFont.bodyMedium)
-                    .foregroundStyle(psyColors.onSurface)
+    private func topEntryRow(_ entry: TopGroup) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(argb: entry.color).opacity(0.14))
+                    .frame(width: 28, height: 28)
+                    .overlay(LucideIcon(name: entry.icon, size: 16, tint: Color(argb: entry.color)))
+                Text(entry.name)
+                    .font(PsyFont.bodyLarge.weight(.semibold))
+                    .foregroundStyle(psyColors.text)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(vm.currency.format(entry.amountMinor))
-                    .font(PsyFont.labelSmall)
-                    .fontWeight(.medium)
-                    .foregroundStyle(psyColors.onSurface)
-                Text("(\(Int(entry.percent * 100))%)")
-                    .font(PsyFont.labelSmall)
-                    .foregroundStyle(psyColors.onSurface.opacity(0.6))
+                    .font(PsyFont.display(15))
+                    .foregroundStyle(psyColors.text)
+                Text("\(Int(entry.percentOfTotal * 100))%")
+                    .font(PsyFont.mono(11))
+                    .foregroundStyle(psyColors.text3)
             }
-            barLine(fraction: entry.percent, color: Color(argb: entry.category.color))
-                .frame(height: 8)
+            barLine(fraction: entry.percentOfTotal, color: Color(argb: entry.color), height: 8)
         }
+        .padding(14)
+        .background(psyColors.surface)
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(psyColors.hair, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Trend
 
     private var trendSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Xu hướng 6 tháng")
-                .font(PsyFont.titleMedium)
-                .fontWeight(.semibold)
-                .foregroundStyle(psyColors.onSurface)
+        VStack(alignment: .leading, spacing: 12) {
+            EyebrowLabel(text: "Xu hướng 6 tháng")
 
             if vm.trend.isEmpty {
                 Text("Không có dữ liệu xu hướng")
                     .font(PsyFont.bodyMedium)
-                    .foregroundStyle(psyColors.onSurface.opacity(0.6))
+                    .foregroundStyle(psyColors.text3)
             } else {
                 TrendChart(trend: vm.trend)
+                    .padding(14)
+                    .background(psyColors.surface)
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(psyColors.hair, lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func legendDot(_ color: Color) -> some View {
-        Circle().fill(color).frame(width: 8, height: 8)
     }
 }

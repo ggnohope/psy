@@ -15,7 +15,7 @@ struct DonutChart: View {
             if slices.isEmpty {
                 // Muted placeholder ring (mirrors Compose's grey full-circle arc).
                 Circle()
-                    .stroke(psyColors.onSurface.opacity(0.10), lineWidth: 36)
+                    .stroke(psyColors.sunken, lineWidth: 36)
                     .padding(18)
             } else {
                 Chart(slices) { slice in
@@ -33,7 +33,7 @@ struct DonutChart: View {
             if !centerLabel.isEmpty {
                 Text(centerLabel)
                     .font(PsyFont.titleMedium)
-                    .foregroundStyle(psyColors.onSurface)
+                    .foregroundStyle(psyColors.text)
                     .multilineTextAlignment(.center)
             }
         }

@@ -23,7 +23,7 @@ final class StatsViewModel {
     var summary = StatsSummary(incomeMinor: 0, expenseMinor: 0, netMinor: 0, avgPerDayMinor: 0)
     var pieMode: TxType = .expense
     var slices: [PieSlice] = []
-    var top: [TopEntry] = []
+    var top: [TopGroup] = []
     var trend: [MonthBars] = []
     var accountBreakdown: [AccountStat] = []
     var selectedAccountId: Int64?
@@ -56,18 +56,20 @@ final class StatsViewModel {
                 let trendStart = month.adding(-5, cal).startMillis(cal)
                 let monthEnd = month.endMillis(cal)
 
-                // Inner combine has 5 inputs → nest CombineLatest4 + CombineLatest.
+                // Inner combine has inputs → nest CombineLatest4 + CombineLatest.
+                // cats + groups are paired into one slot to stay within CombineLatest4.
+                let catsAndGroups = c.categoryRepo.observeAll().combineLatest(c.categoryGroupRepo.observeAll())
                 let repos = Publishers.CombineLatest4(
                     c.transactionRepo.observeBetween(ledgerId: ledger.id, start: trendStart, end: monthEnd),
-                    c.categoryRepo.observeAll(),
+                    catsAndGroups,
                     c.accountRepo.observeAll(),
                     pieModePub
                 )
                 return Publishers.CombineLatest(repos, filterPub)
                     .map { combined, accountFilter in
-                        let (windowTxns, cats, accts, mode) = combined
+                        let (windowTxns, cg, accts, mode) = combined
                         let result = StatsEngine.build(
-                            windowTransactions: windowTxns, categories: cats, accounts: accts,
+                            windowTransactions: windowTxns, categories: cg.0, groups: cg.1, accounts: accts,
                             month: month, pieMode: mode, accountFilter: accountFilter,
                             calendar: cal, now: now
                         )

@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 private const val AUTO_BACKUP_THROTTLE_MS = 5 * 60 * 1000L // 5 minutes
@@ -56,11 +58,16 @@ class AppViewModel @Inject constructor(
     private val _uiMessage = MutableStateFlow<String?>(null)
     val uiMessage: StateFlow<String?> = _uiMessage.asStateFlow()
 
+    private val _isPreparingData = MutableStateFlow(false)
+    val isPreparingData: StateFlow<Boolean> = _isPreparingData.asStateFlow()
+
     private val _isLocked = MutableStateFlow(false)
     val isLocked: StateFlow<Boolean> = _isLocked
 
     private var hasResolvedInitial = false
     private var lastBackgroundedAt = 0L
+    private val prepareMutex = Mutex()
+    private var preparedToken: String? = null
 
     init {
         // On cold start: as soon as settings emit and lockEnabled=true, lock immediately.
@@ -68,6 +75,17 @@ class AppViewModel @Inject constructor(
             settingsRepo.settings.collect { state ->
                 if (!hasResolvedInitial && state.lockEnabled) {
                     _isLocked.value = true
+                }
+            }
+        }
+        // If a token already exists on cold start, restore/seed before opening the app shell.
+        viewModelScope.launch {
+            tokenStore.tokenFlow.collect { token ->
+                if (token == null) {
+                    preparedToken = null
+                    _isPreparingData.value = false
+                } else {
+                    prepareLocalDataForToken(token)
                 }
             }
         }
@@ -84,14 +102,33 @@ class AppViewModel @Inject constructor(
      */
     fun signInGoogle(idToken: String) {
         viewModelScope.launch {
+            _isPreparingData.value = true
             authRepository.signInGoogle(idToken)
                 .onSuccess {
                     _uiMessage.value = null
-                    runCatching { backupRepository.prepareLocalDataAfterLogin() }
+                    val token = tokenStore.tokenFlow.first { it != null } ?: return@onSuccess
+                    prepareLocalDataForToken(token)
                 }
                 .onFailure {
+                    _isPreparingData.value = false
                     _uiMessage.value = it.message ?: "Lỗi đăng nhập Google"
                 }
+        }
+    }
+
+    private suspend fun prepareLocalDataForToken(token: String) {
+        prepareMutex.withLock {
+            if (preparedToken == token) return
+            _isPreparingData.value = true
+            runCatching { backupRepository.prepareLocalDataAfterLogin() }
+                .onSuccess {
+                    preparedToken = token
+                    _uiMessage.value = null
+                }
+                .onFailure {
+                    _uiMessage.value = it.message ?: "Không thể chuẩn bị dữ liệu"
+                }
+            _isPreparingData.value = false
         }
     }
 

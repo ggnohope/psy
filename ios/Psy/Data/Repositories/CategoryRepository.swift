@@ -3,6 +3,7 @@ import Combine
 import SwiftData
 import PsyCore
 
+/// LEAF-level category repository (2-level hierarchy). Type/color live on the parent group.
 @MainActor
 final class CategoryRepository {
     private let context: ModelContext
@@ -19,20 +20,18 @@ final class CategoryRepository {
         }.eraseToAnyPublisher()
     }
 
-    func observeByType(_ type: CategoryType) -> AnyPublisher<[PsyCore.Category], Never> {
-        let raw = type.rawValue
-        return bus.subject(.categories).map { [context] _ in
+    func observeByGroup(_ groupId: Int64) -> AnyPublisher<[PsyCore.Category], Never> {
+        bus.subject(.categories).map { [context] _ in
             let d = FetchDescriptor<CategoryEntity>(
-                predicate: #Predicate { $0.type == raw },
+                predicate: #Predicate { $0.groupId == groupId },
                 sortBy: [SortDescriptor(\.sortOrder, order: .forward)])
             return ((try? context.fetch(d)) ?? []).map { $0.toDomain() }
         }.eraseToAnyPublisher()
     }
 
-    func byType(_ type: CategoryType) -> [PsyCore.Category] {
-        let raw = type.rawValue
+    func byGroup(_ groupId: Int64) -> [PsyCore.Category] {
         let d = FetchDescriptor<CategoryEntity>(
-            predicate: #Predicate { $0.type == raw },
+            predicate: #Predicate { $0.groupId == groupId },
             sortBy: [SortDescriptor(\.sortOrder, order: .forward)])
         return ((try? context.fetch(d)) ?? []).map { $0.toDomain() }
     }
@@ -43,6 +42,10 @@ final class CategoryRepository {
     }
 
     func count() -> Int { (try? context.fetchCount(FetchDescriptor<CategoryEntity>())) ?? 0 }
+
+    func countByGroup(_ groupId: Int64) -> Int {
+        (try? context.fetchCount(FetchDescriptor<CategoryEntity>(predicate: #Predicate { $0.groupId == groupId }))) ?? 0
+    }
 
     @discardableResult
     func upsert(_ category: PsyCore.Category) -> Int64 {

@@ -30,11 +30,11 @@ struct TrendChart: View {
         VStack(spacing: 8) {
             // Legend
             HStack(spacing: 6) {
-                legendDot(CandyColor.green); Text(incomeLabel).font(PsyFont.labelSmall)
+                legendDot(psyColors.green); Text(incomeLabel.uppercased()).font(PsyFont.mono(11)).tracking(1.2)
                 Spacer().frame(width: 12)
-                legendDot(CandyColor.pinkDeep); Text(expenseLabel).font(PsyFont.labelSmall)
+                legendDot(psyColors.red); Text(expenseLabel.uppercased()).font(PsyFont.mono(11)).tracking(1.2)
             }
-            .foregroundStyle(psyColors.onSurface.opacity(0.7))
+            .foregroundStyle(psyColors.text3)
 
             Chart(bars) { bar in
                 BarMark(
@@ -46,8 +46,8 @@ struct TrendChart: View {
                 .cornerRadius(4)
             }
             .chartForegroundStyleScale([
-                incomeLabel: CandyColor.green,
-                expenseLabel: CandyColor.pinkDeep,
+                incomeLabel: psyColors.green,
+                expenseLabel: psyColors.red,
             ])
             .chartLegend(.hidden)
             .chartYAxis(.hidden)
@@ -61,6 +61,6 @@ struct TrendChart: View {
     }
 
     private func legendDot(_ color: Color) -> some View {
-        Circle().fill(color).frame(width: 10, height: 10)
+        RoundedRectangle(cornerRadius: 3).fill(color).frame(width: 10, height: 10)
     }
 }

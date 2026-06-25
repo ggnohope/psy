@@ -26,13 +26,13 @@ final class BudgetViewModel {
     var currency: Currency = .vnd
     var total: TotalBudget?
     var categoryBudgets: [CategoryBudgetItem] = []
-    var availableCategories: [PsyCore.Category] = []
+    var availableGroups: [CategoryGroup] = []
     var loading = true
 
     // Editor sub-state.
     var editorOpen = false
     var editorMode: BudgetEditorMode = .total
-    var editorCategoryId: Int64?
+    var editorGroupId: Int64?
     var draftAmountText = ""
     var isEditing = false
     var editingBudget: PsyCore.Budget?
@@ -40,7 +40,7 @@ final class BudgetViewModel {
     var canSave: Bool {
         let amount = Int64(draftAmountText.filter { $0.isNumber }) ?? 0
         guard amount > 0 else { return false }
-        return editorMode == .total || isEditing || editorCategoryId != nil
+        return editorMode == .total || isEditing || editorGroupId != nil
     }
 
     init(container: AppContainer) {
@@ -65,13 +65,14 @@ final class BudgetViewModel {
                 let currency = Currency.of(ledger.currency)
                 let start = month.startMillis(cal)
                 let end = month.endMillis(cal)
-                return Publishers.CombineLatest3(
+                return Publishers.CombineLatest4(
                     c.transactionRepo.observeBetween(ledgerId: ledger.id, start: start, end: end),
                     c.budgetRepo.observeAll(ledgerId: ledger.id),
-                    c.categoryRepo.observeAll()
+                    c.categoryRepo.observeAll(),
+                    c.categoryGroupRepo.observeByType(.expense)
                 )
-                .map { txns, budgets, cats in
-                    let result = BudgetEngine.build(monthTransactions: txns, budgets: budgets, categories: cats)
+                .map { txns, budgets, cats, groups in
+                    let result = BudgetEngine.build(monthTransactions: txns, budgets: budgets, categories: cats, groups: groups)
                     return (ledger.id, currency, month, result)
                 }
                 .eraseToAnyPublisher()
@@ -86,11 +87,11 @@ final class BudgetViewModel {
                     self.monthLabel = month.label
                     self.total = r.total
                     self.categoryBudgets = r.categoryBudgets
-                    self.availableCategories = r.availableCategories
+                    self.availableGroups = r.availableGroups
                 } else {
                     self.total = nil
                     self.categoryBudgets = []
-                    self.availableCategories = []
+                    self.availableGroups = []
                 }
                 self.loading = false
             }
@@ -108,7 +109,7 @@ final class BudgetViewModel {
         editorMode = .total
         editingBudget = nil
         isEditing = false
-        editorCategoryId = nil
+        editorGroupId = nil
         draftAmountText = ""
         editorOpen = true
     }
@@ -117,7 +118,7 @@ final class BudgetViewModel {
         editorMode = .category
         editingBudget = nil
         isEditing = false
-        editorCategoryId = nil
+        editorGroupId = nil
         draftAmountText = ""
         editorOpen = true
     }
@@ -126,8 +127,8 @@ final class BudgetViewModel {
     func startEdit(_ budget: PsyCore.Budget) {
         editingBudget = budget
         isEditing = true
-        editorMode = budget.categoryId == nil ? .total : .category
-        editorCategoryId = budget.categoryId
+        editorMode = budget.groupId == nil ? .total : .category
+        editorGroupId = budget.groupId
         // For VND (fractionDigits = 0) the stored amountMinor equals the typed integer.
         draftAmountText = String(budget.amountMinor)
         editorOpen = true
@@ -137,15 +138,15 @@ final class BudgetViewModel {
         draftAmountText = s.filter { $0.isNumber }
     }
 
-    func selectEditorCategory(_ id: Int64) {
-        editorCategoryId = id
+    func selectEditorGroup(_ id: Int64) {
+        editorGroupId = id
     }
 
     func closeEditor() {
         editorOpen = false
         editingBudget = nil
         isEditing = false
-        editorCategoryId = nil
+        editorGroupId = nil
         draftAmountText = ""
     }
 
@@ -153,10 +154,10 @@ final class BudgetViewModel {
         // For VND (fractionDigits = 0): typed integer IS the amount in minor units.
         let amount = Int64(draftAmountText.filter { $0.isNumber }) ?? 0
         guard amount > 0 else { return }
-        let catId: Int64? = editorMode == .total ? nil : editorCategoryId
+        let catId: Int64? = editorMode == .total ? nil : editorGroupId
         if editorMode == .category && !isEditing && catId == nil { return }
         guard let ledgerId = cachedLedgerId else { return }
-        container.budgetRepo.setBudget(ledgerId: ledgerId, categoryId: catId, amountMinor: amount)
+        container.budgetRepo.setBudget(ledgerId: ledgerId, groupId: catId, amountMinor: amount)
         closeEditor()
     }
 

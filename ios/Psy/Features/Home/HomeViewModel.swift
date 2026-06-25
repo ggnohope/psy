@@ -35,13 +35,14 @@ final class HomeViewModel {
             .map { ledgers -> AnyPublisher<(Currency, HomeResult)?, Never> in
                 guard let ledger = ledgers.first else { return Just(nil).eraseToAnyPublisher() }
                 let currency = Currency.of(ledger.currency)
-                return Publishers.CombineLatest3(
+                return Publishers.CombineLatest4(
                     c.transactionRepo.observeBetween(ledgerId: ledger.id, start: start, end: end),
                     c.categoryRepo.observeAll(),
+                    c.categoryGroupRepo.observeAll(),
                     c.accountRepo.observeAll()
                 )
-                .map { txns, cats, accts in
-                    (currency, HomeEngine.build(transactions: txns, categories: cats, accounts: accts, calendar: cal, now: now))
+                .map { txns, cats, groups, accts in
+                    (currency, HomeEngine.build(transactions: txns, categories: cats, groups: groups, accounts: accts, calendar: cal, now: now))
                 }
                 .eraseToAnyPublisher()
             }

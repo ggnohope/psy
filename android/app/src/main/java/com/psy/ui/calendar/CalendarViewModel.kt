@@ -179,7 +179,7 @@ class CalendarViewModel @Inject constructor(
                                     CalendarTxRow(
                                         id = tx.id,
                                         categoryName = acc?.name ?: "—",
-                                        categoryIcon = "🔄",
+                                        categoryIcon = "arrow-right-left",
                                         groupName = "",
                                         timeLabel = timeLabel,
                                         accountName = acc?.name ?: "—",
@@ -193,7 +193,7 @@ class CalendarViewModel @Inject constructor(
                                     CalendarTxRow(
                                         id = tx.id,
                                         categoryName = leaf?.name ?: "—",
-                                        categoryIcon = leaf?.icon ?: "📦",
+                                        categoryIcon = leaf?.icon ?: "package",
                                         groupName = group?.name ?: "",
                                         timeLabel = timeLabel,
                                         accountName = acc?.name ?: "—",

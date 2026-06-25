@@ -4,6 +4,7 @@ import com.psy.data.auth.AuthTokenStore
 import com.psy.data.backup.SnapshotManager
 import com.psy.data.remote.BackupApi
 import com.psy.data.remote.dto.BackupRequest
+import com.psy.data.icons.IconMigration
 import com.psy.data.seed.DefaultDataSeeder
 import com.psy.domain.repository.BackupRepository
 import com.psy.domain.repository.RestoreOutcome
@@ -15,6 +16,7 @@ class BackupRepositoryImpl @Inject constructor(
     private val snapshotManager: SnapshotManager,
     private val tokenStore: AuthTokenStore,
     private val seeder: DefaultDataSeeder,
+    private val iconMigration: IconMigration,
 ) : BackupRepository {
 
     override val lastSyncAt: Flow<Long?> = tokenStore.lastSyncAtFlow
@@ -31,6 +33,8 @@ class BackupRepositoryImpl @Inject constructor(
             RestoreOutcome.NoBackup
         } else {
             snapshotManager.import(resp.body()!!.blob)
+            seeder.seedIfEmpty(System.currentTimeMillis())
+            iconMigration.run()
             RestoreOutcome.Restored
         }
     }
@@ -40,9 +44,9 @@ class BackupRepositoryImpl @Inject constructor(
         val resp = backupApi.download()
         if (resp.code() != 204 && resp.body() != null) {
             snapshotManager.import(resp.body()!!.blob)
-        } else {
-            seeder.seedIfEmpty(System.currentTimeMillis())
         }
+        seeder.seedIfEmpty(System.currentTimeMillis())
+        iconMigration.run()
     }
 
     override suspend fun wipeLocal() {

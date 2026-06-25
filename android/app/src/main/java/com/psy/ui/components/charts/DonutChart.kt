@@ -3,10 +3,11 @@ package com.psy.ui.components.charts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,15 +24,26 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.psy.ui.theme.LocalPsyColors
+import com.psy.ui.theme.PlexMono
+import com.psy.ui.theme.SpaceGrotesk
 
 data class PieSlice(val label: String, val amountMinor: Long, val color: Long)
 
+/**
+ * Donut chart with an animated sweep. Slice colors come from the caller's fixed
+ * palette (kept as-is). The center shows an optional mono eyebrow [centerTitle]
+ * above the SpaceGrotesk [centerLabel] total.
+ */
 @Composable
 fun DonutChart(
     slices: List<PieSlice>,
     centerLabel: String,
     modifier: Modifier = Modifier,
+    centerTitle: String? = null,
 ) {
+    val colors = LocalPsyColors.current
     val total = slices.sumOf { it.amountMinor }
 
     // Animate 0 → 1 on first composition or when slices change
@@ -55,7 +67,7 @@ fun DonutChart(
 
             if (total <= 0L) {
                 drawArc(
-                    color = Color(0xFFE5E0F0),
+                    color = colors.sunken,
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -80,10 +92,27 @@ fun DonutChart(
                 }
             }
         }
-        Text(
-            text = centerLabel,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            if (centerTitle != null) {
+                Text(
+                    text = centerTitle.uppercase(),
+                    fontFamily = PlexMono,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.6.sp,
+                    color = colors.text3,
+                )
+            }
+            Text(
+                text = centerLabel,
+                fontFamily = SpaceGrotesk,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = colors.text,
+            )
+        }
     }
 }

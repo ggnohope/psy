@@ -1,6 +1,7 @@
 package com.psy.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,46 +13,38 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import com.composables.icons.lucide.ArrowDownRight
+import com.composables.icons.lucide.ArrowUpRight
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Plus
+import com.composables.icons.lucide.Settings
 import com.psy.domain.model.TxType
 import com.psy.domain.util.Money
-import com.psy.ui.theme.CandyGreen
-import com.psy.ui.theme.CandyPinkDeep
-import com.psy.ui.theme.CandySky
-import com.psy.ui.theme.CandyViolet
+import com.psy.ui.components.EmptyState
+import com.psy.ui.components.EyebrowLabel
+import com.psy.ui.components.HeroCard
+import com.psy.ui.components.TransactionRow
+import com.psy.ui.theme.LocalPsyColors
+import com.psy.ui.theme.PlexMono
+import com.psy.ui.theme.SpaceGrotesk
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onAddClick: () -> Unit,
@@ -59,43 +52,55 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
+    val colors = LocalPsyColors.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Psy") },
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Cài đặt",
-                        )
-                    }
-                },
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddClick,
-                containerColor = MaterialTheme.colorScheme.primary,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Thêm giao dịch",
-                    tint = Color.White,
-                )
-            }
-        },
-    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(horizontal = 22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Balance card
+            // Header: eyebrow + wordmark + settings button
             item {
-                BalanceCard(
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        EyebrowLabel(text = "Tổng quan")
+                        Text(
+                            text = "Psy",
+                            fontFamily = SpaceGrotesk,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 28.sp,
+                            color = colors.text,
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(colors.surface)
+                            .border(1.dp, colors.hair, RoundedCornerShape(12.dp))
+                            .clickable(onClick = onSettingsClick),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Lucide.Settings,
+                            contentDescription = "Cài đặt",
+                            tint = colors.text2,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+
+            // Balance hero card
+            item {
+                BalanceHero(
                     monthLabel = uiState.monthLabel,
                     netMinor = uiState.netMinor,
                     incomeMinor = uiState.incomeMinor,
@@ -107,40 +112,83 @@ fun HomeScreen(
 
             if (uiState.days.isEmpty() && !uiState.loading) {
                 item {
-                    EmptyState()
+                    EmptyState(
+                        iconName = "receipt",
+                        title = "Chưa có giao dịch",
+                        caption = "Thêm giao dịch đầu tiên của bạn hôm nay.",
+                    )
                 }
             } else {
                 uiState.days.forEach { dayGroup ->
                     item {
-                        Text(
+                        EyebrowLabel(
                             text = dayGroup.dateLabel,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(top = 4.dp),
                         )
                     }
                     items(dayGroup.items, key = { it.id }) { row ->
-                        TxRowCard(
-                            row = row,
-                            fractionDigits = uiState.currency.fractionDigits,
-                            symbol = uiState.currency.symbol,
+                        val isIncome = row.type == TxType.INCOME
+                        val sign = when (row.type) {
+                            TxType.INCOME -> "+"
+                            TxType.EXPENSE -> "-"
+                            TxType.TRANSFER -> ""
+                        }
+                        val meta = if (row.groupName.isNotBlank()) {
+                            "${row.groupName} · ${row.timeLabel}"
+                        } else {
+                            row.timeLabel
+                        }
+                        TransactionRow(
+                            iconName = row.categoryIcon,
+                            iconTint = colors.blue,
+                            iconBg = colors.blue.copy(alpha = 0.14f),
+                            name = row.categoryName,
+                            meta = meta,
+                            amount = "$sign${
+                                Money.formatMinor(
+                                    row.amountMinor,
+                                    uiState.currency.fractionDigits,
+                                    uiState.currency.symbol,
+                                )
+                            }",
+                            isIncome = isIncome,
+                            account = row.accountName,
                             onClick = { onTxClick(row.id) },
                         )
                     }
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(80.dp)) }
+            item { Spacer(modifier = Modifier.height(96.dp)) }
+        }
+
+        // Floating action button
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 22.dp, bottom = 24.dp)
+                .size(60.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(colors.blue)
+                .clickable(onClick = onAddClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Lucide.Plus,
+                contentDescription = "Thêm giao dịch",
+                tint = Color.White,
+                modifier = Modifier.size(26.dp),
+            )
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// Balance card
+// Balance hero card
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun BalanceCard(
+private fun BalanceHero(
     monthLabel: String,
     netMinor: Long,
     incomeMinor: Long,
@@ -148,221 +196,120 @@ private fun BalanceCard(
     currencyFractionDigits: Int,
     currencySymbol: String,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(CandyViolet, CandySky),
-                ),
-            )
-            .padding(20.dp),
-    ) {
-        Column {
-            Text(
-                text = monthLabel,
-                color = Color.White.copy(alpha = 0.85f),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = Money.formatMinor(netMinor, currencyFractionDigits, currencySymbol),
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-            ) {
-                Column {
-                    Text(
-                        text = "Thu nhập",
-                        color = Color.White.copy(alpha = 0.75f),
-                        fontSize = 12.sp,
-                    )
-                    Text(
-                        text = "+${Money.formatMinor(incomeMinor, currencyFractionDigits, currencySymbol)}",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                Column {
-                    Text(
-                        text = "Chi tiêu",
-                        color = Color.White.copy(alpha = 0.75f),
-                        fontSize = 12.sp,
-                    )
-                    Text(
-                        text = "-${Money.formatMinor(expenseMinor, currencyFractionDigits, currencySymbol)}",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-        }
-    }
-}
+    val colors = LocalPsyColors.current
+    val monoLabelColor = Color(0xFFAEC4DA)
+    val teal = Color(0xFF19E3E0)
 
-// ---------------------------------------------------------------------------
-// Transaction row card
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun TxRowCard(
-    row: TxRow,
-    fractionDigits: Int,
-    symbol: String,
-    onClick: () -> Unit,
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
+    HeroCard {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Tinted emoji icon circle
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(
-                        when (row.type) {
-                            TxType.EXPENSE -> CandyPinkDeep.copy(alpha = 0.15f)
-                            TxType.INCOME -> CandyGreen.copy(alpha = 0.15f)
-                            TxType.TRANSFER -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                        },
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = row.categoryIcon,
-                    fontSize = 22.sp,
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Category + note + account (or "from → to" for TRANSFER)
-            Column(modifier = Modifier.weight(1f)) {
-                if (row.type == TxType.TRANSFER) {
-                    Text(
-                        text = "${row.accountName} → ${row.toAccountName ?: "—"}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                } else {
-                    Text(
-                        text = row.categoryName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                // Subtitle: "group · time" (or just time when group is blank, e.g. TRANSFER)
-                val subtitle = if (row.groupName.isNotBlank()) {
-                    "${row.groupName} · ${row.timeLabel}"
-                } else {
-                    row.timeLabel
-                }
-                if (subtitle.isNotBlank()) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        maxLines = 1,
-                    )
-                }
-                if (row.note.isNotBlank()) {
-                    Text(
-                        text = row.note,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        maxLines = 1,
-                    )
-                }
-                if (row.type != TxType.TRANSFER) {
-                    Text(
-                        text = row.accountName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                    )
-                }
-            }
-
-            // Photo thumbnail (30dp) — shown when photoUri is present
-            if (row.photoUri != null) {
-                Spacer(modifier = Modifier.width(8.dp))
-                AsyncImage(
-                    model = row.photoUri,
-                    contentDescription = "Ảnh đính kèm",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(RoundedCornerShape(6.dp)),
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Trailing amount with sign + color
-            val (sign, amountColor) = when (row.type) {
-                TxType.EXPENSE -> "-" to CandyPinkDeep
-                TxType.INCOME -> "+" to CandyGreen
-                TxType.TRANSFER -> "" to MaterialTheme.colorScheme.onSurface
-            }
             Text(
-                text = "$sign${Money.formatMinor(row.amountMinor, fractionDigits, symbol)}",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = amountColor,
+                text = "Số dư · $monthLabel",
+                fontFamily = PlexMono,
+                fontSize = 12.sp,
+                color = monoLabelColor,
+                modifier = Modifier.weight(1f),
+            )
+            // LIVE pill
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(999.dp))
+                    .padding(horizontal = 9.dp, vertical = 4.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(teal),
+                )
+                Text(
+                    text = "LIVE",
+                    fontFamily = PlexMono,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.4.sp,
+                    color = teal,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = Money.formatMinor(netMinor, currencyFractionDigits, currencySymbol),
+            fontFamily = SpaceGrotesk,
+            fontWeight = FontWeight.Bold,
+            fontSize = 40.sp,
+            color = Color.White,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatTile(
+                modifier = Modifier.weight(1f),
+                label = "Thu nhập",
+                amount = Money.formatMinor(incomeMinor, currencyFractionDigits, currencySymbol),
+                tint = colors.incomeTint,
+                income = true,
+            )
+            StatTile(
+                modifier = Modifier.weight(1f),
+                label = "Chi tiêu",
+                amount = Money.formatMinor(expenseMinor, currencyFractionDigits, currencySymbol),
+                tint = colors.expenseTint,
+                income = false,
             )
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// Empty state
-// ---------------------------------------------------------------------------
-
 @Composable
-private fun EmptyState() {
+private fun StatTile(
+    label: String,
+    amount: String,
+    tint: Color,
+    income: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val monoLabelColor = Color(0xFFAEC4DA)
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(text = "🌸", fontSize = 48.sp)
-        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                imageVector = if (income) Lucide.ArrowUpRight else Lucide.ArrowDownRight,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = label,
+                fontFamily = PlexMono,
+                fontSize = 11.sp,
+                color = monoLabelColor,
+            )
+        }
         Text(
-            text = "Chưa có giao dịch nào tháng này",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "Nhấn + để thêm giao dịch đầu tiên!",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+            text = amount,
+            fontFamily = SpaceGrotesk,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 16.sp,
+            color = tint,
         )
     }
 }

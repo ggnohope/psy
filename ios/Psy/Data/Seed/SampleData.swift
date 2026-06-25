@@ -17,19 +17,23 @@ enum SampleData {
 
         let accounts = container.accountRepo.all()
         let categories = container.categoryRepo.all()
+        let groups = container.categoryGroupRepo.all()
         guard !accounts.isEmpty, !categories.isEmpty else { return }
 
         let cash = accounts.first { $0.name == "Tiền mặt" } ?? accounts[0]
         let bank = accounts.first { $0.name == "Ngân hàng" } ?? accounts[min(1, accounts.count - 1)]
 
-        func expenseCat(_ name: String) -> PsyCore.Category? {
-            categories.first { $0.type == .expense && $0.name == name }
+        // The sample data refers to GROUP names; resolve to a leaf inside that group.
+        func leaf(inGroupNamed name: String, type: CategoryType) -> PsyCore.Category? {
+            guard let g = groups.first(where: { $0.type == type && $0.name == name }) else { return nil }
+            return categories.first { $0.groupId == g.id }
         }
-        func incomeCat(_ name: String) -> PsyCore.Category? {
-            categories.first { $0.type == .income && $0.name == name }
-        }
-        let anyExpense = categories.first { $0.type == .expense }
-        let anyIncome = categories.first { $0.type == .income }
+        let expenseGroupIds = Set(groups.filter { $0.type == .expense }.map { $0.id })
+        let incomeGroupIds = Set(groups.filter { $0.type == .income }.map { $0.id })
+        func expenseCat(_ name: String) -> PsyCore.Category? { leaf(inGroupNamed: name, type: .expense) }
+        func incomeCat(_ name: String) -> PsyCore.Category? { leaf(inGroupNamed: name, type: .income) }
+        let anyExpense = categories.first { expenseGroupIds.contains($0.groupId) }
+        let anyIncome = categories.first { incomeGroupIds.contains($0.groupId) }
 
         let nowMillis = Int64(now.timeIntervalSince1970 * 1000)
 

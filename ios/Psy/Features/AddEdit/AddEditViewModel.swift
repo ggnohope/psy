@@ -12,9 +12,16 @@ final class AddEditViewModel {
     var isEdit: Bool { txId != 0 }
     var type: TxType = .expense
     var amountText: String = ""
-    var categories: [PsyCore.Category] = []
+    // 2-level category hierarchy (mirrors Android AddEdit).
+    var groups: [CategoryGroup] = []        // parent groups for the current type
+    var leaves: [PsyCore.Category] = []     // leaves of the selected group
+    var selectedGroupId: Int64?
     var accounts: [Account] = []
     var selectedCategoryId: Int64?
+
+    /// The currently selected parent group + leaf, for the breadcrumb.
+    var selectedGroup: CategoryGroup? { groups.first { $0.id == selectedGroupId } }
+    var selectedLeaf: PsyCore.Category? { leaves.first { $0.id == selectedCategoryId } }
     var selectedAccountId: Int64?
     var toAccountId: Int64?
     var date: Date = Date()
@@ -51,20 +58,44 @@ final class AddEditViewModel {
             photoUri = tx.photoUri
             originalCreatedAt = tx.createdAt
         }
-        reloadCategories()
+        reloadGroups(preserveSelection: isEdit)
     }
 
-    func reloadCategories() {
-        guard type != .transfer else { categories = []; selectedCategoryId = nil; return }
+    /// Loads parent groups for the current type, picks a group, then loads its leaves.
+    func reloadGroups(preserveSelection: Bool) {
+        guard type != .transfer else { groups = []; leaves = []; selectedGroupId = nil; selectedCategoryId = nil; return }
         let target: CategoryType = (type == .income) ? .income : .expense
-        categories = container.categoryRepo.byType(target)
-        if !categories.contains(where: { $0.id == selectedCategoryId }) { selectedCategoryId = nil }
+        groups = container.categoryGroupRepo.byType(target)
+        if preserveSelection, let cid = selectedCategoryId,
+           let leaf = container.categoryRepo.all().first(where: { $0.id == cid }) {
+            selectedGroupId = leaf.groupId
+        } else {
+            selectedGroupId = groups.first?.id
+        }
+        loadLeaves(autoSelectFirst: !(preserveSelection && selectedCategoryId != nil))
     }
+
+    private func loadLeaves(autoSelectFirst: Bool) {
+        guard let gid = selectedGroupId else { leaves = []; selectedCategoryId = nil; return }
+        leaves = container.categoryRepo.byGroup(gid)
+        if autoSelectFirst || !leaves.contains(where: { $0.id == selectedCategoryId }) {
+            selectedCategoryId = leaves.first?.id
+        }
+    }
+
+    /// Picking a parent group auto-selects its first leaf (mirrors Android).
+    func selectGroup(_ id: Int64) {
+        selectedGroupId = id
+        leaves = container.categoryRepo.byGroup(id)
+        selectedCategoryId = leaves.first?.id
+    }
+
+    func selectCategory(_ id: Int64) { selectedCategoryId = id }
 
     func onTypeChange(_ newType: TxType) {
         type = newType
-        if newType == .transfer { categories = []; selectedCategoryId = nil }
-        else { toAccountId = nil; reloadCategories() }
+        if newType == .transfer { groups = []; leaves = []; selectedGroupId = nil; selectedCategoryId = nil }
+        else { toAccountId = nil; reloadGroups(preserveSelection: false) }
     }
 
     func attachPhoto(data: Data) {

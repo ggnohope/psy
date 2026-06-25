@@ -14,19 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -41,10 +36,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.psy.domain.model.TxType
 import com.psy.domain.util.Money
+import com.psy.ui.components.EmptyState
+import com.psy.ui.components.EyebrowLabel
 import com.psy.ui.components.MonthSelector
-import com.psy.ui.theme.CandyGreen
-import com.psy.ui.theme.CandyPinkDeep
-import com.psy.ui.theme.CandyViolet
+import com.psy.ui.components.TransactionRow
+import com.psy.ui.theme.LocalPsyColors
+import com.psy.ui.theme.PlexMono
+import com.psy.ui.theme.SpaceGrotesk
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -52,53 +50,72 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val colors = LocalPsyColors.current
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Lịch") })
-        },
-    ) { paddingValues ->
+    Scaffold(containerColor = colors.bg) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp),
         ) {
-            // Month selector
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── Title block ──────────────────────────────────────────────
+            EyebrowLabel(text = "Dòng thời gian")
+            Text(
+                text = "Lịch",
+                fontFamily = SpaceGrotesk,
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp,
+                color = colors.text,
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ── Month switcher ───────────────────────────────────────────
             MonthSelector(
                 month = uiState.monthLabel,
                 onPrev = viewModel::prevMonth,
                 onNext = viewModel::nextMonth,
-                modifier = Modifier.padding(vertical = 4.dp),
             )
 
-            // Weekday header: T2 T3 T4 T5 T6 T7 CN
-            Row(
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ── Calendar card ────────────────────────────────────────────
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(colors.surface)
+                    .border(1.dp, colors.hair, RoundedCornerShape(16.dp))
+                    .padding(12.dp),
             ) {
-                val headers = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
-                headers.forEach { label ->
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                            textAlign = TextAlign.Center,
-                        )
+                // Weekday header: T2 T3 T4 T5 T6 T7 CN
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    val headers = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
+                    headers.forEach { label ->
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = label,
+                                fontFamily = PlexMono,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp,
+                                color = colors.text3,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-            // Calendar grid
-            if (!uiState.loading) {
-                Column(modifier = Modifier.padding(horizontal = 4.dp)) {
+                // Day grid
+                if (!uiState.loading) {
                     uiState.weeks.forEach { week ->
                         Row(modifier = Modifier.fillMaxWidth()) {
                             week.forEach { cell ->
@@ -108,8 +125,6 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                                     DayCellBox(
                                         cell = cell,
                                         isSelected = cell.date == uiState.selectedDay,
-                                        fractionDigits = uiState.currency.fractionDigits,
-                                        symbol = uiState.currency.symbol,
                                         onClick = { viewModel.selectDay(cell.date) },
                                         modifier = Modifier.weight(1f),
                                     )
@@ -120,30 +135,45 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Selected day header + transaction list
+            // ── Selected-day divider + transaction list ──────────────────
             val selDay = uiState.selectedDay
             if (selDay != null) {
                 Text(
-                    text = "Giao dịch ngày ${selDay.format(DateTimeFormatter.ofPattern("dd/MM"))}",
-                    style = MaterialTheme.typography.titleSmall,
+                    text = "Giao dịch · ${selDay.format(DateTimeFormatter.ofPattern("dd/MM"))}",
+                    fontFamily = PlexMono,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    fontSize = 12.sp,
+                    color = colors.text3,
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = colors.hair, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(12.dp))
+
                 if (uiState.dayRows.isEmpty()) {
-                    EmptyDayState(message = "Không có giao dịch")
+                    EmptyState(
+                        iconName = "calendar",
+                        title = "Không có giao dịch",
+                        caption = "Chọn ngày khác hoặc thêm giao dịch.",
+                    )
                 } else {
-                    uiState.dayRows.forEach { row ->
-                        CalendarTxRowCard(
-                            row = row,
-                            fractionDigits = uiState.currency.fractionDigits,
-                            symbol = uiState.currency.symbol,
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        uiState.dayRows.forEach { row ->
+                            CalendarTxRow(
+                                row = row,
+                                fractionDigits = uiState.currency.fractionDigits,
+                                symbol = uiState.currency.symbol,
+                            )
+                        }
                     }
                 }
             } else {
-                EmptyDayState(message = "Chưa chọn ngày")
+                EmptyState(
+                    iconName = "calendar",
+                    title = "Không có giao dịch",
+                    caption = "Chọn ngày khác hoặc thêm giao dịch.",
+                )
             }
 
             Spacer(modifier = Modifier.height(80.dp))
@@ -159,29 +189,20 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
 private fun DayCellBox(
     cell: DayCell,
     isSelected: Boolean,
-    fractionDigits: Int,
-    symbol: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val todayBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-    val selectedBg = CandyViolet.copy(alpha = 0.18f)
+    val colors = LocalPsyColors.current
+    val shape = RoundedCornerShape(9.dp)
 
     Box(
         modifier = modifier
             .aspectRatio(1f)
             .padding(2.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(shape)
+            .background(if (isSelected) colors.blueSoft else Color.Transparent)
             .then(
-                if (isSelected) Modifier.border(2.dp, CandyViolet, RoundedCornerShape(8.dp))
-                else Modifier
-            )
-            .background(
-                when {
-                    isSelected -> selectedBg
-                    cell.isToday -> todayBg
-                    else -> Color.Transparent
-                }
+                if (isSelected) Modifier.border(1.5.dp, colors.blue, shape) else Modifier
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -192,19 +213,19 @@ private fun DayCellBox(
         ) {
             Text(
                 text = cell.date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (cell.isToday) FontWeight.Bold else FontWeight.Normal,
-                color = if (cell.isToday) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface,
+                fontFamily = SpaceGrotesk,
+                fontWeight = if (cell.isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
+                fontSize = 14.sp,
+                color = if (isSelected) colors.blue else colors.text,
             )
-            // Show tiny colored dots for income/expense
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            // Tiny dots: expense (red) / income (green)
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 if (cell.expenseMinor > 0L) {
                     Box(
                         modifier = Modifier
                             .size(5.dp)
                             .clip(CircleShape)
-                            .background(CandyPinkDeep),
+                            .background(colors.red),
                     )
                 }
                 if (cell.incomeMinor > 0L) {
@@ -212,7 +233,7 @@ private fun DayCellBox(
                         modifier = Modifier
                             .size(5.dp)
                             .clip(CircleShape)
-                            .background(CandyGreen),
+                            .background(colors.green),
                     )
                 }
             }
@@ -221,130 +242,42 @@ private fun DayCellBox(
 }
 
 // ---------------------------------------------------------------------------
-// Transaction row card (calendar variant — no click handler)
+// Transaction row (shared TransactionRow component)
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun CalendarTxRowCard(
+private fun CalendarTxRow(
     row: CalendarTxRow,
     fractionDigits: Int,
     symbol: String,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Emoji icon circle
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(
-                        when (row.type) {
-                            TxType.EXPENSE -> CandyPinkDeep.copy(alpha = 0.15f)
-                            TxType.INCOME -> CandyGreen.copy(alpha = 0.15f)
-                            TxType.TRANSFER -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                        }
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(text = row.categoryIcon, fontSize = 22.sp)
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Category/transfer label + note + account
-            Column(modifier = Modifier.weight(1f)) {
-                if (row.type == TxType.TRANSFER) {
-                    Text(
-                        text = "${row.accountName} → ${row.toAccountName ?: "—"}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                } else {
-                    Text(
-                        text = row.categoryName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                // Subtitle: "group · time" (or just time when group is blank, e.g. TRANSFER)
-                val subtitle = if (row.groupName.isNotBlank()) {
-                    "${row.groupName} · ${row.timeLabel}"
-                } else {
-                    row.timeLabel
-                }
-                if (subtitle.isNotBlank()) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        maxLines = 1,
-                    )
-                }
-                if (row.note.isNotBlank()) {
-                    Text(
-                        text = row.note,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        maxLines = 1,
-                    )
-                }
-                if (row.type != TxType.TRANSFER) {
-                    Text(
-                        text = row.accountName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Trailing amount
-            val (sign, amountColor) = when (row.type) {
-                TxType.EXPENSE -> "-" to CandyPinkDeep
-                TxType.INCOME -> "+" to CandyGreen
-                TxType.TRANSFER -> "" to MaterialTheme.colorScheme.onSurface
-            }
-            Text(
-                text = "$sign${Money.formatMinor(row.amountMinor, fractionDigits, symbol)}",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = amountColor,
-            )
-        }
+    val colors = LocalPsyColors.current
+    val isIncome = row.type == TxType.INCOME
+    val sign = when (row.type) {
+        TxType.EXPENSE -> "-"
+        TxType.INCOME -> "+"
+        TxType.TRANSFER -> ""
     }
-}
-
-// ---------------------------------------------------------------------------
-// Empty state
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun EmptyDayState(message: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-        )
+    val name = if (row.type == TxType.TRANSFER) {
+        "${row.accountName} → ${row.toAccountName ?: "—"}"
+    } else {
+        row.categoryName
     }
+    val meta = if (row.groupName.isNotBlank()) {
+        "${row.groupName} · ${row.timeLabel}"
+    } else {
+        row.timeLabel
+    }
+
+    TransactionRow(
+        iconName = row.categoryIcon,
+        iconTint = colors.blue,
+        iconBg = colors.blue.copy(alpha = 0.14f),
+        name = name,
+        meta = meta,
+        amount = "$sign${Money.formatMinor(row.amountMinor, fractionDigits, symbol)}",
+        isIncome = isIncome,
+        account = if (row.type == TxType.TRANSFER) "" else row.accountName,
+        onClick = {},
+    )
 }

@@ -3,7 +3,7 @@ import SwiftData
 
 enum ModelContainerFactory {
     static let schema = Schema([
-        LedgerEntity.self, AccountEntity.self, CategoryEntity.self,
+        LedgerEntity.self, AccountEntity.self, CategoryGroupEntity.self, CategoryEntity.self,
         TransactionEntity.self, BudgetEntity.self,
     ])
 

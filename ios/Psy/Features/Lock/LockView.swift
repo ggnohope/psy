@@ -2,7 +2,7 @@ import SwiftUI
 
 private let pinLength = 4
 
-/// Candy Pop lock screen. Fixed 4-digit PIN via a numeric keypad; optional Face ID
+/// HostGuardIQ lock screen. Fixed 4-digit PIN via a numeric keypad; optional Face ID
 /// auto-prompt + key. Auto-submits as soon as 4 digits are entered.
 struct LockView: View {
     let biometricEnabled: Bool
@@ -20,11 +20,15 @@ struct LockView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            Text("🔒").font(.system(size: 48))
-            Spacer().frame(height: 10)
-            Text("Psy").font(PsyFont.headlineMedium).foregroundStyle(psyColors.primary)
+            RoundedRectangle(cornerRadius: PsyRadius.hero, style: .continuous)
+                .fill(psyColors.blueSoft)
+                .frame(width: 72, height: 72)
+                .overlay(LucideIcon(name: "lock", size: 34, tint: psyColors.blue))
+
+            Spacer().frame(height: 16)
+            Text("Psy").font(PsyFont.display(32)).foregroundStyle(psyColors.text)
             Spacer().frame(height: 6)
-            Text("Nhập mã PIN").font(PsyFont.bodyMedium).foregroundStyle(psyColors.onSurface.opacity(0.6))
+            Text("Nhập mã PIN").font(PsyFont.bodyMedium).foregroundStyle(psyColors.text2)
 
             Spacer().frame(height: 28)
             PinDots(total: pinLength, filled: pin.count)
@@ -32,7 +36,7 @@ struct LockView: View {
             Spacer().frame(height: 12)
             Text(error.isEmpty ? " " : error)
                 .font(PsyFont.bodyMedium)
-                .foregroundStyle(CandyColor.pinkDeep)
+                .foregroundStyle(psyColors.red)
                 .frame(height: 20)
 
             Spacer().frame(height: 20)
@@ -42,7 +46,7 @@ struct LockView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, 40)
-        .background(psyColors.background.ignoresSafeArea())
+        .background(psyColors.bg.ignoresSafeArea())
         .task { if biometricUsable { promptBiometric() } }
     }
 

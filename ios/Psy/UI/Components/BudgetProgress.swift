@@ -1,11 +1,13 @@
 import SwiftUI
 
 /// Rounded progress bar for budgets. Ports `BudgetProgress.kt`:
-/// fill = min(spent/limit, 1.0); over-budget (spent > limit) is tinted a warning color
-/// (`CandyColor.pinkDeep`), otherwise the accent `primary`. The track is a faint violet.
+/// fill = min(spent/limit, 1.0); over-budget (spent > limit) → red, otherwise green.
+/// Track is the sunken token.
 struct BudgetProgress: View {
     let spentMinor: Int64
     let limitMinor: Int64
+    var height: CGFloat = 10
+    var fillColorOverride: Color? = nil
     @Environment(\.psyColors) private var psyColors
 
     private var fraction: Double {
@@ -14,18 +16,19 @@ struct BudgetProgress: View {
     }
 
     private var fillColor: Color {
-        (spentMinor > limitMinor && limitMinor > 0) ? CandyColor.pinkDeep : psyColors.primary
+        if let fillColorOverride { return fillColorOverride }
+        return (spentMinor > limitMinor && limitMinor > 0) ? psyColors.red : psyColors.green
     }
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(CandyColor.violet.opacity(0.15))
+                Capsule().fill(psyColors.sunken)
                 Capsule()
                     .fill(fillColor)
                     .frame(width: geo.size.width * fraction)
             }
         }
-        .frame(height: 12)
+        .frame(height: height)
     }
 }

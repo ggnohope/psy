@@ -17,7 +17,7 @@ final class SettingsStore {
 
     init() {
         themeMode = ThemeMode(rawValue: d.string(forKey: K.mode) ?? "") ?? .system
-        accent = AccentPalette(rawValue: d.string(forKey: K.accent) ?? "") ?? .candyViolet
+        accent = Self.parseAccent(d.string(forKey: K.accent))
         lockEnabled = d.bool(forKey: K.lock)
         biometricEnabled = d.bool(forKey: K.bio)
         pinHash = d.string(forKey: K.pin)
@@ -26,6 +26,16 @@ final class SettingsStore {
     func setPin(_ pin: String) { pinHash = Self.hash(pin); d.set(pinHash, forKey: K.pin) }
     func clearPin() { pinHash = nil; d.removeObject(forKey: K.pin) }
     func verifyPin(_ pin: String) -> Bool { pinHash != nil && pinHash == Self.hash(pin) }
+
+    /// Tolerant parse: migrate legacy candy accent values to the HostGuardIQ palette.
+    private static func parseAccent(_ raw: String?) -> AccentPalette {
+        switch raw {
+        case "BLUE", "AMBER", "TEAL": return AccentPalette(rawValue: raw!)!
+        case "CANDY_PINK": return .amber   // closest warm hue
+        case "CANDY_MINT": return .teal
+        default: return .blue              // CANDY_VIOLET, nil, or unknown
+        }
+    }
 
     private static func hash(_ pin: String) -> String {
         let digest = SHA256.hash(data: Data("psy_salt:\(pin)".utf8))

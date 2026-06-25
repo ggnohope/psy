@@ -1,8 +1,8 @@
 package com.psy.ui.stats
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,15 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -31,42 +26,52 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.psy.domain.model.Account
+import com.psy.domain.model.AccountType
 import com.psy.domain.model.Currency
 import com.psy.domain.model.TxType
 import com.psy.domain.util.Money
+import com.psy.ui.components.EmptyState
+import com.psy.ui.components.EyebrowLabel
+import com.psy.ui.components.HeroCard
+import com.psy.ui.components.IconTile
 import com.psy.ui.components.MonthSelector
+import com.psy.ui.components.SegmentedControl
 import com.psy.ui.components.charts.DonutChart
 import com.psy.ui.components.charts.TrendBars
-import com.psy.ui.theme.CandyGreen
-import com.psy.ui.theme.CandyPinkDeep
-import com.psy.ui.theme.CandySky
-import com.psy.ui.theme.CandyViolet
+import com.psy.ui.theme.LocalPsyColors
+import com.psy.ui.theme.PlexMono
+import com.psy.ui.theme.SpaceGrotesk
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val colors = LocalPsyColors.current
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Thống kê") })
-        },
-    ) { paddingValues ->
+    Scaffold(containerColor = colors.bg) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = 22.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
+            // ── Title block ───────────────────────────────────────────────
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                EyebrowLabel("Phân tích")
+                Text(
+                    text = "Thống kê",
+                    style = androidx.compose.material3.MaterialTheme.typography.headlineMedium,
+                    color = colors.text,
+                )
+            }
+
             // ── Month selector ────────────────────────────────────────────
             MonthSelector(
                 month = state.monthLabel,
@@ -74,65 +79,86 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
                 onNext = viewModel::nextMonth,
             )
 
-            // ── Account filter chips ──────────────────────────────────────
+            // ── Account filter (Tất cả / Tiền mặt / Ngân hàng) ────────────
+            // Map fixed segments onto the VM's accountId filter without touching
+            // its logic: segment 0 -> all, 1 -> first CASH account, 2 -> first BANK.
             if (state.accounts.isNotEmpty()) {
-                AccountChipRow(
-                    accounts = state.accounts,
-                    selectedAccountId = state.selectedAccountId,
-                    onSelect = viewModel::selectAccount,
+                val firstCash = state.accounts.firstOrNull { it.type == AccountType.CASH }
+                val firstBank = state.accounts.firstOrNull { it.type == AccountType.BANK }
+                val selectedType = state.accounts
+                    .firstOrNull { it.id == state.selectedAccountId }
+                    ?.type
+                val selectedIndex = when {
+                    state.selectedAccountId == null -> 0
+                    selectedType == AccountType.CASH -> 1
+                    selectedType == AccountType.BANK -> 2
+                    else -> 0
+                }
+                SegmentedControl(
+                    options = listOf("Tất cả", "Tiền mặt", "Ngân hàng"),
+                    selectedIndex = selectedIndex,
+                    onSelect = { index ->
+                        when (index) {
+                            1 -> viewModel.selectAccount(firstCash?.id)
+                            2 -> viewModel.selectAccount(firstBank?.id)
+                            else -> viewModel.selectAccount(null)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
-            // ── Summary card ──────────────────────────────────────────────
-            SummaryCard(state = state)
+            // ── Summary hero card ─────────────────────────────────────────
+            SummaryHeroCard(state = state)
 
-            // ── Per-account comparison (only in "Tất cả" mode) ────────────
-            if (state.selectedAccountId == null) {
-                AccountBreakdownCard(
-                    breakdown = state.accountBreakdown,
-                    currency = state.currency,
-                    onSelect = viewModel::selectAccount,
-                )
+            // ── Per-account breakdown (only in "Tất cả" mode) ─────────────
+            if (state.selectedAccountId == null && state.accountBreakdown.isNotEmpty()) {
+                AccountBreakdownSection(state = state, onSelect = viewModel::selectAccount)
             }
 
             // ── Chi / Thu segmented toggle ────────────────────────────────
-            PieModeToggle(
-                pieMode = state.pieMode,
-                onSelect = viewModel::setPieMode,
+            SegmentedControl(
+                options = listOf("Chi tiêu", "Thu nhập"),
+                selectedIndex = if (state.pieMode == TxType.EXPENSE) 0 else 1,
+                onSelect = { index ->
+                    viewModel.setPieMode(if (index == 0) TxType.EXPENSE else TxType.INCOME)
+                },
+                modifier = Modifier.fillMaxWidth(),
             )
 
             // ── Donut chart + legend ──────────────────────────────────────
             val currency = state.currency
             val pieTotal = state.slices.sumOf { it.amountMinor }
+            val pieIsEmpty = state.slices.isEmpty()
+            val centerTitle = if (state.pieMode == TxType.EXPENSE) "Chi tiêu" else "Thu nhập"
             val centerLabel = if (pieTotal > 0L) {
                 Money.formatMinor(pieTotal, currency.fractionDigits, currency.symbol)
             } else {
                 "—"
             }
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                DonutChart(
-                    slices = state.slices,
-                    centerLabel = centerLabel,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
+            if (pieIsEmpty) {
+                EmptyState(
+                    iconName = "chart-column",
+                    title = "Chưa có dữ liệu",
+                    caption = "Thêm giao dịch để xem thống kê.",
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (state.slices.isEmpty()) {
-                    Text(
-                        text = "Không có dữ liệu cho tháng này",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            } else {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    DonutChart(
+                        slices = state.slices,
+                        centerLabel = centerLabel,
+                        centerTitle = centerTitle,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
                     )
-                } else {
-                    // Legend
+
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         state.slices.forEach { slice ->
                             val slicePercent = if (pieTotal > 0L) {
@@ -144,20 +170,22 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(12.dp)
-                                        .clip(CircleShape)
+                                        .size(10.dp)
+                                        .clip(RoundedCornerShape(3.dp))
                                         .background(Color(slice.color)),
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = slice.label,
-                                    style = MaterialTheme.typography.bodySmall,
+                                    fontSize = 14.sp,
+                                    color = colors.text,
                                     modifier = Modifier.weight(1f),
                                 )
                                 Text(
                                     text = "${(slicePercent * 100).toInt()}%",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontFamily = PlexMono,
+                                    fontSize = 12.sp,
+                                    color = colors.text3,
                                 )
                             }
                         }
@@ -166,23 +194,10 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
             }
 
             // ── Top chi tiêu / Top thu nhập ───────────────────────────────
-            val topTitle = if (state.pieMode == TxType.EXPENSE) "Top chi tiêu" else "Top thu nhập"
-            Text(
-                text = topTitle,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-
-            if (state.top.isEmpty()) {
-                Text(
-                    text = "Không có danh mục nào trong tháng này",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                // Track which groups are expanded to reveal their leaf breakdown.
-                val expanded = remember { mutableStateMapOf<Long, Boolean>() }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (state.top.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    EyebrowLabel(if (state.pieMode == TxType.EXPENSE) "Top chi tiêu" else "Top thu nhập")
+                    val expanded = remember { mutableStateMapOf<Long, Boolean>() }
                     state.top.forEach { group ->
                         TopGroupRow(
                             group = group,
@@ -197,24 +212,14 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
             }
 
             // ── Trend 6 months ────────────────────────────────────────────
-            Text(
-                text = "Xu hướng 6 tháng",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-
-            if (state.trend.isEmpty()) {
-                Text(
-                    text = "Không có dữ liệu xu hướng",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                TrendBars(months = state.trend)
+            if (state.trend.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    EyebrowLabel("Xu hướng 6 tháng")
+                    TrendBars(months = state.trend)
+                }
             }
 
-            // Bottom spacing
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -224,257 +229,96 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun SummaryCard(state: StatsUiState) {
+private fun SummaryHeroCard(state: StatsUiState) {
+    val colors = LocalPsyColors.current
     val currency = state.currency
-    val gradientBrush = Brush.horizontalGradient(listOf(CandyViolet, CandySky))
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(gradientBrush)
-            .padding(16.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    fun money(minor: Long) =
+        Money.formatMinor(minor, currency.fractionDigits, currency.symbol)
+
+    HeroCard {
+        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                SummaryItem(
-                    label = "Thu",
-                    amount = Money.formatMinor(
-                        state.summary.incomeMinor,
-                        currency.fractionDigits,
-                        currency.symbol,
-                    ),
-                    modifier = Modifier.weight(1f),
-                )
-                SummaryItem(
-                    label = "Chi",
-                    amount = Money.formatMinor(
-                        state.summary.expenseMinor,
-                        currency.fractionDigits,
-                        currency.symbol,
-                    ),
-                    modifier = Modifier.weight(1f),
-                )
+                HeroStat("Thu", money(state.summary.incomeMinor), colors.incomeTint, Modifier.weight(1f))
+                HeroStat("Chi", money(state.summary.expenseMinor), colors.expenseTint, Modifier.weight(1f))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                SummaryItem(
-                    label = "Chênh lệch",
-                    amount = Money.formatMinor(
-                        state.summary.netMinor,
-                        currency.fractionDigits,
-                        currency.symbol,
-                    ),
-                    modifier = Modifier.weight(1f),
-                )
-                SummaryItem(
-                    label = "TB ngày",
-                    amount = Money.formatMinor(
-                        state.summary.avgPerDayMinor,
-                        currency.fractionDigits,
-                        currency.symbol,
-                    ),
-                    modifier = Modifier.weight(1f),
-                )
+                HeroStat("Chênh lệch", money(state.summary.netMinor), Color.White, Modifier.weight(1f))
+                HeroStat("TB ngày", money(state.summary.avgPerDayMinor), Color.White, Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-private fun SummaryItem(
+private fun HeroStat(
     label: String,
-    amount: String,
+    value: String,
+    valueColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.8f),
+            text = label.uppercase(),
+            fontFamily = PlexMono,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.6.sp,
+            color = Color.White.copy(alpha = 0.7f),
         )
         Text(
-            text = amount,
-            style = MaterialTheme.typography.bodyMedium,
+            text = value,
+            fontFamily = SpaceGrotesk,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            fontSize = 22.sp,
+            color = valueColor,
         )
     }
 }
 
-@Composable
-private fun PieModeToggle(
-    pieMode: TxType,
-    onSelect: (TxType) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(0.dp),
-    ) {
-        PieModeToggleItem(
-            label = "Chi tiêu",
-            selected = pieMode == TxType.EXPENSE,
-            onClick = { onSelect(TxType.EXPENSE) },
-            modifier = Modifier.weight(1f),
-        )
-        PieModeToggleItem(
-            label = "Thu nhập",
-            selected = pieMode == TxType.INCOME,
-            onClick = { onSelect(TxType.INCOME) },
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
+// ── Per-account breakdown ───────────────────────────────────────────────────
 
 @Composable
-private fun PieModeToggleItem(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val bgColor = if (selected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        Color.Transparent
-    }
-    val textColor = if (selected) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .clip(RoundedCornerShape(50))
-            .background(bgColor),
-    ) {
-        TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = label,
-                color = textColor,
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
-    }
-}
-
-// ── Account filter chips ───────────────────────────────────────────────────
-
-@Composable
-private fun AccountChipRow(
-    accounts: List<Account>,
-    selectedAccountId: Long?,
+private fun AccountBreakdownSection(
+    state: StatsUiState,
     onSelect: (Long?) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        AccountChip(
-            label = "Tất cả",
-            selected = selectedAccountId == null,
-            onClick = { onSelect(null) },
-        )
-        accounts.forEach { account ->
-            AccountChip(
-                label = "${account.icon} ${account.name}",
-                selected = selectedAccountId == account.id,
-                onClick = { onSelect(account.id) },
-            )
-        }
-    }
-}
+    val colors = LocalPsyColors.current
+    val maxValue = state.accountBreakdown
+        .maxOf { maxOf(it.incomeMinor, it.expenseMinor) }
+        .coerceAtLeast(1L)
 
-@Composable
-private fun AccountChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val bgColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(bgColor)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = label,
-            color = textColor,
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
-        )
-    }
-}
-
-// ── Per-account comparison card ─────────────────────────────────────────────
-
-@Composable
-private fun AccountBreakdownCard(
-    breakdown: List<AccountStat>,
-    currency: Currency,
-    onSelect: (Long?) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "💜 Theo tài khoản",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            // Legend: thu / chi
+            EyebrowLabel("Theo tài khoản")
             Row(verticalAlignment = Alignment.CenterVertically) {
-                LegendDot(CandyGreen); Spacer(Modifier.width(4.dp))
-                Text("Thu", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(10.dp))
-                LegendDot(CandyPinkDeep); Spacer(Modifier.width(4.dp))
-                Text("Chi", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LegendSwatch(colors.green)
+                Spacer(Modifier.width(4.dp))
+                Text("Thu", fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
+                Spacer(Modifier.width(12.dp))
+                LegendSwatch(colors.red)
+                Spacer(Modifier.width(4.dp))
+                Text("Chi", fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
             }
         }
-
-        if (breakdown.isEmpty()) {
-            Text(
-                text = "Kỳ này chưa có giao dịch theo tài khoản",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        state.accountBreakdown.forEachIndexed { index, stat ->
+            AccountBreakdownRow(
+                stat = stat,
+                maxValue = maxValue,
+                currency = state.currency,
+                iconTint = if (index % 2 == 0) colors.blue else colors.green,
+                onClick = { onSelect(stat.id) },
             )
-        } else {
-            // Scale all bars against the largest single income/expense across accounts.
-            val maxValue = breakdown.maxOf { maxOf(it.incomeMinor, it.expenseMinor) }.coerceAtLeast(1L)
-            breakdown.forEach { stat ->
-                AccountBreakdownRow(
-                    stat = stat,
-                    maxValue = maxValue,
-                    currency = currency,
-                    onClick = { onSelect(stat.id) },
-                )
-            }
         }
     }
 }
@@ -484,27 +328,28 @@ private fun AccountBreakdownRow(
     stat: AccountStat,
     maxValue: Long,
     currency: Currency,
+    iconTint: Color,
     onClick: () -> Unit,
 ) {
+    val colors = LocalPsyColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.hair, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
+            .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(13.dp),
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color(stat.color).copy(alpha = 0.18f)),
-        ) {
-            Text(text = stat.icon, style = MaterialTheme.typography.bodyMedium)
-        }
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        IconTile(
+            iconName = stat.icon,
+            tint = iconTint,
+            bg = iconTint.copy(alpha = 0.14f),
+            size = 42.dp,
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -512,52 +357,69 @@ private fun AccountBreakdownRow(
             ) {
                 Text(
                     text = stat.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    color = colors.text,
                     maxLines = 1,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
                     text = Money.formatMinor(stat.netMinor, currency.fractionDigits, currency.symbol),
-                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = SpaceGrotesk,
                     fontWeight = FontWeight.Bold,
-                    color = if (stat.netMinor >= 0L) CandyGreen else CandyPinkDeep,
+                    fontSize = 15.sp,
+                    color = if (stat.netMinor >= 0L) colors.green else colors.red,
                 )
             }
-            BarLine(fraction = stat.incomeMinor.toFloat() / maxValue.toFloat(), color = CandyGreen)
-            BarLine(fraction = stat.expenseMinor.toFloat() / maxValue.toFloat(), color = CandyPinkDeep)
+            ProgressBar(
+                fraction = stat.incomeMinor.toFloat() / maxValue.toFloat(),
+                color = colors.green,
+                height = 6.dp,
+            )
+            ProgressBar(
+                fraction = stat.expenseMinor.toFloat() / maxValue.toFloat(),
+                color = colors.red,
+                height = 6.dp,
+            )
         }
     }
 }
 
 @Composable
-private fun BarLine(fraction: Float, color: Color) {
+private fun ProgressBar(
+    fraction: Float,
+    color: Color,
+    height: androidx.compose.ui.unit.Dp,
+) {
+    val colors = LocalPsyColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(6.dp)
-            .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .height(height)
+            .clip(RoundedCornerShape(999.dp))
+            .background(colors.sunken),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
-                .height(6.dp)
-                .clip(RoundedCornerShape(50))
+                .height(height)
+                .clip(RoundedCornerShape(999.dp))
                 .background(color),
         )
     }
 }
 
 @Composable
-private fun LegendDot(color: Color) {
+private fun LegendSwatch(color: Color) {
     Box(
         modifier = Modifier
-            .size(8.dp)
-            .clip(CircleShape)
+            .size(10.dp)
+            .clip(RoundedCornerShape(3.dp))
             .background(color),
     )
 }
+
+// ── Top groups ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun TopGroupRow(
@@ -566,89 +428,64 @@ private fun TopGroupRow(
     expanded: Boolean,
     onToggle: () -> Unit,
 ) {
+    val colors = LocalPsyColors.current
     val groupColor = Color(group.color)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.hair, RoundedCornerShape(14.dp))
             .clickable(onClick = onToggle)
-            .padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Colored dot matching the pie slice color.
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(groupColor),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            // Group icon + name (bold)
+            LegendSwatch(groupColor)
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "${group.icon} ${group.name}",
-                style = MaterialTheme.typography.bodyMedium,
+                text = group.name,
                 fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                color = colors.text,
                 modifier = Modifier.weight(1f),
             )
-            // Amount
             Text(
-                text = Money.formatMinor(
-                    group.amountMinor,
-                    currency.fractionDigits,
-                    currency.symbol,
-                ),
-                style = MaterialTheme.typography.bodySmall,
+                text = Money.formatMinor(group.amountMinor, currency.fractionDigits, currency.symbol),
+                fontFamily = SpaceGrotesk,
                 fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = colors.text,
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            // Percent of total + count
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "(${(group.percentOfTotal * 100).toInt()}% · ${group.count})",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = if (expanded) "▾" else "▸",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "${(group.percentOfTotal * 100).toInt()}% · ${group.count}",
+                fontFamily = PlexMono,
+                fontSize = 11.sp,
+                color = colors.text3,
             )
         }
 
-        // Group proportion bar (of total)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(fraction = group.percentOfTotal.coerceIn(0f, 1f))
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(groupColor),
-            )
-        }
+        ProgressBar(
+            fraction = group.percentOfTotal,
+            color = groupColor,
+            height = 8.dp,
+        )
 
-        // Leaf breakdown when expanded.
         if (expanded) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, top = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                    .padding(start = 20.dp, top = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 group.children.forEach { leaf ->
                     TopLeafRow(
                         leaf = leaf,
                         currency = currency,
-                        // Lighter shade of the group color for child bars.
                         barColor = groupColor.copy(alpha = 0.45f),
                     )
                 }
@@ -663,50 +500,40 @@ private fun TopLeafRow(
     currency: Currency,
     barColor: Color,
 ) {
+    val colors = LocalPsyColors.current
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "${leaf.icon} ${leaf.name}",
-                style = MaterialTheme.typography.bodySmall,
+                text = leaf.name,
+                fontSize = 13.sp,
+                color = colors.text2,
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = Money.formatMinor(
-                    leaf.amountMinor,
-                    currency.fractionDigits,
-                    currency.symbol,
-                ),
-                style = MaterialTheme.typography.bodySmall,
+                text = Money.formatMinor(leaf.amountMinor, currency.fractionDigits, currency.symbol),
+                fontFamily = SpaceGrotesk,
                 fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+                color = colors.text,
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "(${(leaf.percentInGroup * 100).toInt()}%)",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "${(leaf.percentInGroup * 100).toInt()}%",
+                fontFamily = PlexMono,
+                fontSize = 11.sp,
+                color = colors.text3,
             )
         }
-        // Leaf proportion bar (within its group)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(fraction = leaf.percentInGroup.coerceIn(0f, 1f))
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(barColor),
-            )
-        }
+        ProgressBar(
+            fraction = leaf.percentInGroup,
+            color = barColor,
+            height = 6.dp,
+        )
     }
 }

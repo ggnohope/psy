@@ -15,24 +15,25 @@ class DefaultDataSeeder @Inject constructor(
             ledgerRepo.upsert(Ledger(name = "Sổ của tôi", icon = "wallet", currency = "VND", createdAt = now))
         }
         if (accountRepo.count() == 0) {
-            accountRepo.upsert(Account(name = "Tiền mặt", type = AccountType.CASH, icon = "💵", color = 0xFF22C55E))
-            accountRepo.upsert(Account(name = "Ngân hàng", type = AccountType.BANK, icon = "🏦", color = 0xFF7FD8FF))
+            accountRepo.upsert(Account(name = "Tiền mặt", type = AccountType.CASH, icon = "wallet", color = 0xFF1F9D62))
+            accountRepo.upsert(Account(name = "Ngân hàng", type = AccountType.BANK, icon = "landmark", color = 0xFF0A7CF6))
         }
         if (categoryGroupRepo.count() == 0) {
+            // HostGuardIQ palette (blue/amber/teal/green/red family)
             val palette = listOf(
-                0xFFFF8FD6L, 0xFFA18CFFL, 0xFF7FD8FFL, 0xFFFFB86BL, 0xFF6BCB77L,
-                0xFFFF6B6BL, 0xFFB088F9L, 0xFF4D96FFL, 0xFFFF5FA2L, 0xFF22C55EL,
+                0xFF0A7CF6L, 0xFFF59E0BL, 0xFF0BB3B0L, 0xFF1F9D62L, 0xFFE0413AL,
+                0xFF3D97F8L, 0xFFFBB43DL, 0xFF19E3E0L,
             )
             data class Seed(val name: String, val icon: String, val type: CategoryType, val leaves: List<Pair<String, String>>)
             val seeds = listOf(
-                Seed("Ăn uống", "🍜", CategoryType.EXPENSE, listOf("Đi chợ" to "🛒", "Nhà hàng" to "🍽️", "Khác" to "🍴")),
-                Seed("Cà phê", "☕", CategoryType.EXPENSE, listOf("Cà phê" to "☕", "Trà sữa" to "🧋", "Khác" to "🥤")),
-                Seed("Vận tải", "🚌", CategoryType.EXPENSE, listOf("Grab" to "🛵", "Xăng" to "⛽", "Giữ xe" to "🅿️", "Metro" to "🚇", "Khác" to "🚗")),
-                Seed("Mua sắm", "🛍️", CategoryType.EXPENSE, listOf("Quần áo" to "👕", "Đồ dùng" to "🧴", "Khác" to "📦")),
-                Seed("Hoá đơn", "🧾", CategoryType.EXPENSE, listOf("Điện nước" to "💡", "Internet" to "🌐", "Khác" to "🧾")),
-                Seed("Giải trí", "🎮", CategoryType.EXPENSE, listOf("Khác" to "🎮")),
-                Seed("Lương", "💰", CategoryType.INCOME, listOf("Khác" to "💰")),
-                Seed("Thưởng", "🎁", CategoryType.INCOME, listOf("Khác" to "🎁")),
+                Seed("Ăn uống", "utensils", CategoryType.EXPENSE, listOf("Đi chợ" to "shopping-cart", "Nhà hàng" to "utensils", "Khác" to "utensils")),
+                Seed("Cà phê", "coffee", CategoryType.EXPENSE, listOf("Cà phê" to "coffee", "Trà sữa" to "cup-soda", "Khác" to "cup-soda")),
+                Seed("Vận tải", "bus", CategoryType.EXPENSE, listOf("Grab" to "bike", "Xăng" to "fuel", "Giữ xe" to "square-parking", "Metro" to "train-front", "Khác" to "car")),
+                Seed("Mua sắm", "shopping-bag", CategoryType.EXPENSE, listOf("Quần áo" to "shirt", "Đồ dùng" to "package", "Khác" to "package")),
+                Seed("Hoá đơn", "receipt", CategoryType.EXPENSE, listOf("Điện nước" to "lightbulb", "Internet" to "globe", "Khác" to "receipt")),
+                Seed("Giải trí", "gamepad-2", CategoryType.EXPENSE, listOf("Khác" to "gamepad-2")),
+                Seed("Lương", "banknote", CategoryType.INCOME, listOf("Khác" to "banknote")),
+                Seed("Thưởng", "gift", CategoryType.INCOME, listOf("Khác" to "gift")),
             )
             seeds.forEachIndexed { gi, s ->
                 val gid = categoryGroupRepo.upsert(
