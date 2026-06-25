@@ -134,7 +134,7 @@ private struct CategoryEditorSheet: View {
                         .textFieldStyle(.roundedBorder)
 
                     Text("Biểu tượng").font(PsyFont.bodyMedium).foregroundStyle(psyColors.onSurface.opacity(0.7))
-                    EmojiPicker(selected: vm.draftIcon) { vm.draftIcon = $0 }
+                    IconPicker(selected: vm.draftIcon) { vm.draftIcon = $0 }
 
                     Text("Màu sắc").font(PsyFont.bodyMedium).foregroundStyle(psyColors.onSurface.opacity(0.7))
                     ColorPicker(selected: vm.draftColor) { vm.draftColor = $0 }

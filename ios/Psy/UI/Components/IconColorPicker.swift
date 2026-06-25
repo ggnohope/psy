@@ -4,49 +4,41 @@ import SwiftUI
 /// Ports IconColorPicker.kt (same emoji set and color palette values).
 
 enum IconColorPalette {
-    /// 36 emojis (6×6 grid), matching EMOJI_LIST in IconColorPicker.kt.
-    static let emojis: [String] = [
-        "🍜", "🚌", "🛍️", "🧾", "🎮", "💊",
-        "📦", "💰", "🎁", "🏠", "🚗", "☕",
-        "🍺", "👕", "🏥", "🎬", "📱", "✈️",
-        "🎓", "🐶", "💵", "🏦", "💳", "🪙",
-        "📈", "🎀", "🧴", "🍔", "🍰", "🚕",
-        "⛽", "🏋️", "🎵", "🛒", "☂️", "🎈",
-    ]
-
-    /// ARGB-packed colors, matching COLOR_PALETTE in IconColorPicker.kt.
+    /// HostGuardIQ color palette (blue/amber/teal/green/red + neutrals).
     static let colors: [Int64] = [
-        0xFFA18CFF, 0xFF7FD8FF, 0xFFFF8FD6, 0xFFFF5FA2, 0xFF22C55E,
-        0xFFFFB86B, 0xFF6BCB77, 0xFF4D96FF, 0xFFFF6B6B, 0xFFB088F9,
+        0xFF0A7CF6, 0xFFF59E0B, 0xFF0BB3B0, 0xFF1F9D62, 0xFFE0413A,
+        0xFF3D97F8, 0xFFFBB43D, 0xFF19E3E0, 0xFF5B6B80, 0xFF0A2540,
     ]
 }
 
-/// 6-column emoji grid; selected emoji highlighted with a tinted cell + primary border.
-struct EmojiPicker: View {
+/// Searchable Lucide icon picker (replaces the old emoji grid).
+/// `selected`/`onPick` are Lucide name strings (e.g. "shopping-bag").
+struct IconPicker: View {
     @Environment(\.psyColors) private var psyColors
     let selected: String
     let onPick: (String) -> Void
+    @State private var query = ""
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 6)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 6)
+    private var items: [String] {
+        query.isEmpty ? LucideIcons.pickerSet
+            : LucideIcons.pickerSet.filter { $0.localizedCaseInsensitiveContains(query.trimmingCharacters(in: .whitespaces)) }
+    }
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 0) {
-            ForEach(IconColorPalette.emojis, id: \.self) { emoji in
-                let isSelected = emoji == selected
-                Text(emoji)
-                    .font(.system(size: 22))
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(1, contentMode: .fit)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(isSelected ? psyColors.primary.opacity(0.18) : Color.clear)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(isSelected ? psyColors.primary : .clear, lineWidth: 2)
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture { onPick(emoji) }
+        VStack(spacing: 8) {
+            TextField("Tìm biểu tượng", text: $query)
+                .textFieldStyle(.roundedBorder)
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(items, id: \.self) { name in
+                    let isSelected = name == selected
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isSelected ? psyColors.blueSoft : psyColors.sunken)
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay(LucideIcon(name: name, size: 22, tint: isSelected ? psyColors.blue : psyColors.text2))
+                        .contentShape(Rectangle())
+                        .onTapGesture { onPick(name) }
+                }
             }
         }
     }
