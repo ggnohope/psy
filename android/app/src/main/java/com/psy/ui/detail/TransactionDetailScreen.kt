@@ -1,5 +1,8 @@
 package com.psy.ui.detail
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,20 +17,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,19 +31,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.composables.icons.lucide.ArrowLeft
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Pencil
+import com.composables.icons.lucide.Trash2
 import com.psy.domain.model.TxType
 import com.psy.domain.util.Money
-import com.psy.ui.theme.CandyGreen
-import com.psy.ui.theme.CandyPinkDeep
+import com.psy.ui.components.HeroCard
+import com.psy.ui.icons.LucideIcon
+import com.psy.ui.theme.LocalPsyColors
+import com.psy.ui.theme.PlexMono
+import com.psy.ui.theme.SpaceGrotesk
 import kotlinx.coroutines.flow.collectLatest
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionDetailScreen(
     onBack: () -> Unit,
@@ -57,6 +59,7 @@ fun TransactionDetailScreen(
     onDeleted: () -> Unit,
     viewModel: TransactionDetailViewModel = hiltViewModel(),
 ) {
+    val colors = LocalPsyColors.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -65,133 +68,203 @@ fun TransactionDetailScreen(
         viewModel.doneEvent.collectLatest { onDeleted() }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Chi tiết") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
-                    }
-                },
-                actions = {
-                    if (state.found) {
-                        IconButton(onClick = onEdit) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Sửa")
-                        }
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Xoá")
-                        }
-                    }
-                },
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.bg)
+            .padding(horizontal = 22.dp),
+    ) {
+        // ── In-page header ───────────────────────────────────────────────
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Lucide.ArrowLeft,
+                    contentDescription = "Quay lại",
+                    tint = colors.text,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Text(
+                text = "Chi tiết",
+                fontFamily = SpaceGrotesk,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 20.sp,
+                color = colors.text,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp),
             )
-        },
-    ) { innerPadding ->
+            if (state.found) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(onClick = onEdit),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Lucide.Pencil,
+                        contentDescription = "Sửa",
+                        tint = colors.text2,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(colors.redSoft)
+                        .clickable(onClick = { showDeleteDialog = true }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Lucide.Trash2,
+                        contentDescription = "Xoá",
+                        tint = colors.red,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+
         when {
             state.loading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = colors.blue)
                 }
             }
 
             !state.found -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "Không tìm thấy giao dịch",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp,
+                        color = colors.text3,
                     )
                 }
             }
 
             else -> {
                 val currency = state.currency
+                val isIncome = state.type == TxType.INCOME
+                val amountTint = if (isIncome) colors.incomeTint else colors.expenseTint
+                val sign = when (state.type) {
+                    TxType.EXPENSE -> "-"
+                    TxType.INCOME -> "+"
+                    TxType.TRANSFER -> ""
+                }
+                // Mono category eyebrow e.g. "Vận tải · Chi". Derived from the existing
+                // categoryLabel "Group(Chi)" so no ViewModel change is needed.
+                val typeWord = when (state.type) {
+                    TxType.EXPENSE -> "Chi"
+                    TxType.INCOME -> "Thu"
+                    TxType.TRANSFER -> "Chuyển khoản"
+                }
+                val groupName = state.categoryLabel.substringBefore("(", "").trim()
+                val monoLabel = if (groupName.isNotBlank()) "$groupName · $typeWord" else typeWord
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(top = 16.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    // ── Header: icon + title + signed amount ──────────────────
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = state.icon, style = MaterialTheme.typography.headlineMedium)
-                        Spacer(Modifier.width(12.dp))
+                    // ── Hero card ─────────────────────────────────────────
+                    HeroCard {
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            LucideIcon(
+                                name = state.icon,
+                                tint = Color.White,
+                                size = 26.dp,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             text = state.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f),
+                            fontFamily = SpaceGrotesk,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp,
+                            color = Color.White,
                         )
-                        val (sign, amountColor) = when (state.type) {
-                            TxType.EXPENSE -> "-" to CandyPinkDeep
-                            TxType.INCOME -> "+" to CandyGreen
-                            TxType.TRANSFER -> "" to MaterialTheme.colorScheme.onSurface
-                        }
+                        Text(
+                            text = monoLabel,
+                            fontFamily = PlexMono,
+                            fontWeight = FontWeight.Light,
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.7f),
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "$sign${Money.formatMinor(state.amountMinor, currency.fractionDigits, currency.symbol)}",
-                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = SpaceGrotesk,
                             fontWeight = FontWeight.Bold,
-                            color = amountColor,
+                            fontSize = 32.sp,
+                            color = amountTint,
                         )
                     }
 
-                    // ── Detail rows ───────────────────────────────────────────
-                    DetailRow(label = "Sổ", value = state.ledgerName.ifBlank { "—" })
-                    DetailRow(label = "Ngày", value = state.dateLabel)
-                    DetailRow(label = "Giờ", value = state.timeLabel)
-
+                    // ── Detail list card ──────────────────────────────────
                     val accountValue = if (state.type == TxType.TRANSFER && state.toAccountName != null) {
                         "${state.accountName} → ${state.toAccountName}"
                     } else {
                         state.accountName
                     }
-                    DetailRow(label = "Tài khoản", value = accountValue)
-
-                    if (state.type != TxType.TRANSFER) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.surface)
+                            .border(1.dp, colors.hair, RoundedCornerShape(14.dp)),
+                    ) {
+                        DetailRow(label = "Sổ", value = state.ledgerName.ifBlank { "—" })
+                        Hairline()
+                        DetailRow(label = "Ngày", value = state.dateLabel, mono = true)
+                        Hairline()
+                        DetailRow(label = "Giờ", value = state.timeLabel, mono = true)
+                        Hairline()
+                        DetailRow(label = "Tài khoản", value = accountValue)
+                        Hairline()
                         DetailRow(
-                            label = "Danh mục",
-                            value = state.categoryLabel.ifBlank { "—" },
+                            label = "Ghi chú",
+                            value = state.note.ifBlank { "Không có ghi chú" },
                         )
                     }
 
-                    DetailRow(
-                        label = "Ghi chú",
-                        value = state.note.ifBlank { "Không có ghi chú" },
-                    )
-
-                    // ── Photo ─────────────────────────────────────────────────
+                    // ── Photo ─────────────────────────────────────────────
                     if (state.photoUri != null) {
-                        Text(
-                            text = "Ảnh đính kèm",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                         AsyncImage(
                             model = state.photoUri,
                             contentDescription = "Ảnh đính kèm",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp)),
+                                .clip(RoundedCornerShape(14.dp)),
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -200,8 +273,9 @@ fun TransactionDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Xoá giao dịch?") },
-            text = { Text("Hành động này không thể hoàn tác.") },
+            containerColor = colors.surface,
+            title = { Text("Xoá giao dịch?", color = colors.text) },
+            text = { Text("Hành động này không thể hoàn tác.", color = colors.text3) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -209,12 +283,12 @@ fun TransactionDetailScreen(
                         viewModel.delete()
                     },
                 ) {
-                    Text("Xoá", color = CandyPinkDeep)
+                    Text("Xoá", color = colors.red)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Huỷ")
+                    Text("Huỷ", color = colors.text2)
                 }
             },
         )
@@ -222,21 +296,37 @@ fun TransactionDetailScreen(
 }
 
 @Composable
-private fun DetailRow(label: String, value: String) {
+private fun Hairline() {
+    val colors = LocalPsyColors.current
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(colors.hair),
+    )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String, mono: Boolean = false) {
+    val colors = LocalPsyColors.current
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 14.sp,
+            color = colors.text3,
             modifier = Modifier.width(96.dp),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
+            fontFamily = if (mono) PlexMono else null,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.text,
             modifier = Modifier.weight(1f),
         )
     }

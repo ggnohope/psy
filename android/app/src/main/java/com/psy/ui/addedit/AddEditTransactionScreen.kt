@@ -6,13 +6,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,18 +19,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
@@ -40,15 +31,12 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -69,14 +57,20 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.composables.icons.lucide.ArrowLeft
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Trash2
+import com.composables.icons.lucide.X
 import com.psy.domain.model.Account
 import com.psy.domain.model.Category
 import com.psy.domain.model.CategoryGroup
+import com.psy.domain.model.Currency
 import com.psy.domain.model.TxType
 import com.psy.domain.util.Money
-import com.psy.ui.theme.CandyGreen
-import com.psy.ui.theme.CandyPinkDeep
-import com.psy.ui.theme.CandyViolet
+import com.psy.ui.icons.LucideIcon
+import com.psy.ui.theme.LocalPsyColors
+import com.psy.ui.theme.PlexMono
+import com.psy.ui.theme.SpaceGrotesk
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -87,14 +81,12 @@ fun AddEditTransactionScreen(
     onDone: () -> Unit,
     viewModel: AddEditTransactionViewModel = hiltViewModel(),
 ) {
+    val colors = LocalPsyColors.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Observe the one-shot done event from the ViewModel.
-    // LaunchedEffect with a stable key so it only launches once per screen.
     LaunchedEffect(Unit) {
-        viewModel.doneEvent.collect {
-            onDone()
-        }
+        viewModel.doneEvent.collect { onDone() }
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
@@ -107,68 +99,58 @@ fun AddEditTransactionScreen(
         if (uri != null) viewModel.onPickPhoto(uri)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (uiState.isEdit) "Sửa giao dịch" else "Thêm giao dịch",
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onDone) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Quay lại",
-                        )
-                    }
-                },
-                actions = {
-                    if (uiState.isEdit) {
-                        IconButton(onClick = { viewModel.delete() }) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Xoá giao dịch",
-                                tint = CandyPinkDeep,
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-            )
-        },
-    ) { paddingValues ->
+    // Amount validation: numeric and > 0. amountText is digits-only (VM strips non-digits).
+    val parsedAmount = uiState.amountText.toLongOrNull()
+    val amountInvalid = uiState.amountText.isNotEmpty() && (parsedAmount == null || parsedAmount <= 0L)
+
+    Scaffold(containerColor = colors.bg) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = 22.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            // ----------------------------------------------------------------
-            // 1. Income / Expense segmented toggle
-            // ----------------------------------------------------------------
-            SegmentedTypeToggle(
+            // ── Header: back + title + (optional) delete ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onDone) {
+                    Icon(Lucide.ArrowLeft, contentDescription = "Quay lại", tint = colors.text)
+                }
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = if (uiState.isEdit) "Sửa giao dịch" else "Thêm giao dịch",
+                    fontFamily = SpaceGrotesk,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    color = colors.text,
+                    modifier = Modifier.weight(1f),
+                )
+                if (uiState.isEdit) {
+                    IconButton(onClick = { viewModel.delete() }) {
+                        Icon(Lucide.Trash2, contentDescription = "Xoá giao dịch", tint = colors.red)
+                    }
+                }
+            }
+
+            // ── 1. Type segmented control ──
+            SegmentedTypeControl(
                 selectedType = uiState.type,
                 onTypeSelected = viewModel::onTypeChange,
             )
 
-            // ----------------------------------------------------------------
-            // 2. Amount field
-            // ----------------------------------------------------------------
+            // ── 2. Amount display + input ──
             AmountSection(
                 amountText = uiState.amountText,
                 currency = uiState.currency,
+                invalid = amountInvalid,
                 onAmountChange = viewModel::onAmountChange,
             )
 
-            // ----------------------------------------------------------------
-            // 3. Category picker: group tabs → leaf grid (hidden for TRANSFER)
-            // ----------------------------------------------------------------
+            // ── 3. Category picker (hidden for TRANSFER) ──
             if (uiState.type != TxType.TRANSFER && uiState.groups.isNotEmpty()) {
                 CategorySection(
                     groups = uiState.groups,
@@ -180,34 +162,30 @@ fun AddEditTransactionScreen(
                 )
             }
 
-            // ----------------------------------------------------------------
-            // 4. Account chips — for TRANSFER: two selectors; otherwise single
-            // ----------------------------------------------------------------
+            // ── 4. Account picker — TRANSFER: from + to; otherwise single ──
             if (uiState.accounts.isNotEmpty()) {
                 if (uiState.type == TxType.TRANSFER) {
-                    // "Từ tài khoản" (from)
                     AccountSection(
                         label = "Từ tài khoản",
                         accounts = uiState.accounts,
                         selectedId = uiState.selectedAccountId,
                         onSelect = viewModel::selectAccount,
                     )
-                    // "Đến tài khoản" (to)
                     AccountSection(
                         label = "Đến tài khoản",
                         accounts = uiState.accounts,
                         selectedId = uiState.toAccountId,
                         onSelect = viewModel::onToAccountChange,
                     )
-                    // Warn when from == to
                     val fromEqTo = uiState.selectedAccountId != null &&
                         uiState.toAccountId != null &&
                         uiState.selectedAccountId == uiState.toAccountId
                     if (fromEqTo) {
                         Text(
                             text = "Hai tài khoản phải khác nhau",
-                            color = CandyPinkDeep,
-                            style = MaterialTheme.typography.labelMedium,
+                            color = colors.red,
+                            fontFamily = PlexMono,
+                            fontSize = 12.sp,
                             modifier = Modifier.padding(horizontal = 4.dp),
                         )
                     }
@@ -221,30 +199,32 @@ fun AddEditTransactionScreen(
                 }
             }
 
-            // ----------------------------------------------------------------
-            // 5. Date + time picker buttons
-            // ----------------------------------------------------------------
+            // ── 5. Date + time ──
             DateTimeSection(
                 dateMillis = uiState.date,
                 onPickDate = { showDatePicker = true },
                 onPickTime = { showTimePicker = true },
             )
 
-            // ----------------------------------------------------------------
-            // 6. Note field
-            // ----------------------------------------------------------------
+            // ── 6. Note ──
             OutlinedTextField(
                 value = uiState.note,
                 onValueChange = viewModel::onNoteChange,
-                label = { Text("Ghi chú") },
+                placeholder = { Text("Ghi chú", color = colors.text3) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(8.dp),
                 maxLines = 3,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = colors.hair,
+                    focusedBorderColor = colors.blue,
+                    unfocusedContainerColor = colors.surface,
+                    focusedContainerColor = colors.surface,
+                    unfocusedTextColor = colors.text,
+                    focusedTextColor = colors.text,
+                ),
             )
 
-            // ----------------------------------------------------------------
-            // 7. Photo attachment
-            // ----------------------------------------------------------------
+            // ── 7. Photo attachment ──
             PhotoSection(
                 photoUri = uiState.photoUri,
                 errorMessage = uiState.photoErrorMessage,
@@ -257,25 +237,23 @@ fun AddEditTransactionScreen(
                 onErrorDismiss = viewModel::clearPhotoError,
             )
 
-            // ----------------------------------------------------------------
-            // 8. Save button
-            // ----------------------------------------------------------------
+            // ── 8. Save ──
             Button(
                 onClick = { viewModel.save(System.currentTimeMillis()) },
                 enabled = uiState.canSave,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = CandyViolet,
-                    disabledContainerColor = CandyViolet.copy(alpha = 0.4f),
+                    containerColor = colors.blue,
+                    disabledContainerColor = colors.blue.copy(alpha = 0.4f),
                 ),
             ) {
                 Text(
-                    text = "Lưu",
+                    text = "Lưu giao dịch",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                 )
             }
@@ -284,9 +262,7 @@ fun AddEditTransactionScreen(
         }
     }
 
-    // ----------------------------------------------------------------
-    // Date picker dialog
-    // ----------------------------------------------------------------
+    // ── Date picker dialog ──
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = if (uiState.date > 0L) uiState.date else System.currentTimeMillis(),
@@ -296,27 +272,19 @@ fun AddEditTransactionScreen(
             confirmButton = {
                 TextButton(onClick = {
                     val selectedMillis = datePickerState.selectedDateMillis
-                    if (selectedMillis != null) {
-                        viewModel.onDateChange(selectedMillis)
-                    }
+                    if (selectedMillis != null) viewModel.onDateChange(selectedMillis)
                     showDatePicker = false
-                }) {
-                    Text("Xác nhận")
-                }
+                }) { Text("Xác nhận") }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Huỷ")
-                }
+                TextButton(onClick = { showDatePicker = false }) { Text("Huỷ") }
             },
         ) {
             DatePicker(state = datePickerState)
         }
     }
 
-    // ----------------------------------------------------------------
-    // Time picker dialog
-    // ----------------------------------------------------------------
+    // ── Time picker dialog ──
     if (showTimePicker) {
         val zone = ZoneId.systemDefault()
         val current = Instant.ofEpochMilli(
@@ -333,14 +301,10 @@ fun AddEditTransactionScreen(
                 TextButton(onClick = {
                     viewModel.onTimeChange(timePickerState.hour, timePickerState.minute)
                     showTimePicker = false
-                }) {
-                    Text("Xác nhận")
-                }
+                }) { Text("Xác nhận") }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) {
-                    Text("Huỷ")
-                }
+                TextButton(onClick = { showTimePicker = false }) { Text("Huỷ") }
             },
         ) {
             Box(
@@ -356,62 +320,38 @@ fun AddEditTransactionScreen(
 }
 
 // ---------------------------------------------------------------------------
-// Segmented toggle: Income / Expense
+// Type segmented control
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun SegmentedTypeToggle(
+private fun SegmentedTypeControl(
     selectedType: TxType,
     onTypeSelected: (TxType) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(50.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        TxType.entries.forEach { type ->
-            val isSelected = type == selectedType
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary
-                        else Color.Transparent,
-                    )
-                    .clickable { onTypeSelected(type) }
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = when (type) {
-                        TxType.EXPENSE -> "Chi tiêu"
-                        TxType.INCOME -> "Thu nhập"
-                        TxType.TRANSFER -> "Chuyển khoản"
-                    },
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-                    fontSize = 14.sp,
-                )
-            }
-        }
-    }
+    // Order mirrors the label list below.
+    val order = listOf(TxType.INCOME, TxType.EXPENSE, TxType.TRANSFER)
+    com.psy.ui.components.SegmentedControl(
+        options = listOf("Thu nhập", "Chi tiêu", "Chuyển khoản"),
+        selectedIndex = order.indexOf(selectedType).coerceAtLeast(0),
+        onSelect = { onTypeSelected(order[it]) },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 // ---------------------------------------------------------------------------
 // Amount display + input
 // ---------------------------------------------------------------------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AmountSection(
     amountText: String,
-    currency: com.psy.domain.model.Currency,
+    currency: Currency,
+    invalid: Boolean,
     onAmountChange: (String) -> Unit,
 ) {
+    val colors = LocalPsyColors.current
     val displayAmount: Long = amountText.toLongOrNull() ?: 0L
-    // For display: reconstruct amountMinor from typed whole-unit value.
     var divisor = 1L
     repeat(currency.fractionDigits) { divisor *= 10L }
     val amountMinor = displayAmount * divisor
@@ -422,25 +362,58 @@ private fun AmountSection(
     ) {
         Text(
             text = Money.formatMinor(amountMinor, currency.fractionDigits, currency.symbol),
-            fontSize = 36.sp,
+            fontFamily = SpaceGrotesk,
+            fontSize = 42.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = colors.text,
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Nhập số tiền",
+            fontFamily = PlexMono,
+            fontSize = 12.sp,
+            color = colors.text3,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
         OutlinedTextField(
             value = amountText,
             onValueChange = onAmountChange,
-            label = { Text("Số tiền") },
+            placeholder = { Text("Số tiền", color = colors.text3, fontFamily = SpaceGrotesk, fontSize = 18.sp) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, if (invalid) colors.red else colors.hair, RoundedCornerShape(8.dp)),
+            shape = RoundedCornerShape(8.dp),
             singleLine = true,
+            isError = invalid,
+            textStyle = androidx.compose.ui.text.TextStyle(
+                fontFamily = SpaceGrotesk,
+                fontSize = 18.sp,
+                color = colors.text,
+            ),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.Transparent,
+                focusedBorderColor = Color.Transparent,
+                errorBorderColor = Color.Transparent,
+                unfocusedContainerColor = colors.surface,
+                focusedContainerColor = colors.surface,
+                errorContainerColor = colors.surface,
+            ),
         )
+        if (invalid) {
+            Text(
+                text = "Số tiền phải lớn hơn 0",
+                color = colors.red,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, start = 4.dp),
+            )
+        }
     }
 }
 
 // ---------------------------------------------------------------------------
-// Category picker: group tab row + leaf grid (4 columns)
+// Category picker: breadcrumb + parent grid + subcategory pills
 // ---------------------------------------------------------------------------
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -453,44 +426,82 @@ private fun CategorySection(
     onSelectGroup: (Long) -> Unit,
     onSelectLeaf: (Long) -> Unit,
 ) {
-    Column {
-        Text(
-            text = "Danh mục",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
+    val colors = LocalPsyColors.current
+    val selectedGroup = groups.firstOrNull { it.id == selectedGroupId }
+    val selectedLeaf = leaves.firstOrNull { it.id == selectedLeafId }
 
-        // ── Group tab row (horizontally scrollable chips) ──
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Header row: mono label + breadcrumb pill
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            groups.forEach { group ->
-                GroupTabChip(
-                    group = group,
-                    isSelected = group.id == selectedGroupId,
-                    onClick = { onSelectGroup(group.id) },
-                )
+            Text(
+                text = "DANH MỤC",
+                fontFamily = PlexMono,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.sp,
+                letterSpacing = 1.6.sp,
+                color = colors.text3,
+            )
+            if (selectedGroup != null) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(colors.blueSoft)
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    LucideIcon(
+                        name = selectedLeaf?.icon ?: selectedGroup.icon,
+                        tint = colors.blue,
+                        size = 14.dp,
+                    )
+                    Text(
+                        text = if (selectedLeaf != null) "${selectedGroup.name} › ${selectedLeaf.name}"
+                        else selectedGroup.name,
+                        color = colors.blue,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        // Picker card
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(colors.surface)
+                .border(1.dp, colors.hair, RoundedCornerShape(14.dp))
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Parent grid — manual 4-column grid (no nested scroll inside the page scroll)
+            ParentGrid(
+                groups = groups,
+                selectedGroupId = selectedGroupId,
+                onSelectGroup = onSelectGroup,
+            )
 
-        // ── Leaf grid for the selected group ──
-        if (leaves.isNotEmpty()) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                contentPadding = PaddingValues(0.dp),
+            // Hairline divider
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colors.hair),
+            )
+
+            // Subcategory pills
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.height((((leaves.size + 3) / 4) * 80).dp),
-                userScrollEnabled = false,
             ) {
-                items(leaves, key = { it.id }) { leaf ->
-                    LeafChip(
+                leaves.forEach { leaf ->
+                    SubcategoryPill(
                         leaf = leaf,
                         isSelected = leaf.id == selectedLeafId,
                         onSelect = { onSelectLeaf(leaf.id) },
@@ -502,76 +513,101 @@ private fun CategorySection(
 }
 
 @Composable
-private fun GroupTabChip(
+private fun ParentGrid(
+    groups: List<CategoryGroup>,
+    selectedGroupId: Long?,
+    onSelectGroup: (Long) -> Unit,
+) {
+    val columns = 4
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        groups.chunked(columns).forEach { rowGroups ->
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                rowGroups.forEach { group ->
+                    ParentTile(
+                        group = group,
+                        isSelected = group.id == selectedGroupId,
+                        onClick = { onSelectGroup(group.id) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                // Pad the last row so tiles keep equal width.
+                repeat(columns - rowGroups.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ParentTile(
     group: CategoryGroup,
     isSelected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50.dp))
-            .background(
-                if (isSelected) CandyViolet.copy(alpha = 0.15f)
-                else MaterialTheme.colorScheme.surfaceVariant,
-            )
-            .border(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) CandyViolet else Color.Transparent,
-                shape = RoundedCornerShape(50.dp),
+    val colors = LocalPsyColors.current
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(11.dp))
+            .background(if (isSelected) colors.blueSoft else colors.sunken)
+            .then(
+                if (isSelected) Modifier.border(1.5.dp, colors.blue, RoundedCornerShape(11.dp))
+                else Modifier,
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(text = group.icon, fontSize = 16.sp)
-        Spacer(modifier = Modifier.width(4.dp))
+        LucideIcon(
+            name = group.icon,
+            tint = if (isSelected) colors.blue else colors.text2,
+            size = 21.dp,
+        )
         Text(
             text = group.name,
-            fontSize = 13.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) CandyViolet else MaterialTheme.colorScheme.onSurface,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) colors.blue else colors.text2,
             maxLines = 1,
         )
     }
 }
 
 @Composable
-private fun LeafChip(
+private fun SubcategoryPill(
     leaf: Category,
     isSelected: Boolean,
     onSelect: () -> Unit,
 ) {
-    Column(
+    val colors = LocalPsyColors.current
+    Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(
-                if (isSelected) CandyViolet.copy(alpha = 0.15f)
-                else MaterialTheme.colorScheme.surfaceVariant,
-            )
-            .border(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) CandyViolet else Color.Transparent,
-                shape = RoundedCornerShape(14.dp),
-            )
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (isSelected) colors.blue else colors.sunken)
             .clickable(onClick = onSelect)
-            .padding(vertical = 8.dp, horizontal = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(text = leaf.icon, fontSize = 22.sp)
-        Spacer(modifier = Modifier.height(2.dp))
+        LucideIcon(
+            name = leaf.icon,
+            tint = if (isSelected) Color.White else colors.text2,
+            size = 17.dp,
+        )
         Text(
             text = leaf.name,
-            fontSize = 10.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) CandyViolet else MaterialTheme.colorScheme.onSurface,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) Color.White else colors.text2,
             maxLines = 1,
         )
     }
 }
 
 // ---------------------------------------------------------------------------
-// Account chips row
+// Account chips
 // ---------------------------------------------------------------------------
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -580,14 +616,17 @@ private fun AccountSection(
     accounts: List<Account>,
     selectedId: Long?,
     onSelect: (Long) -> Unit,
-    label: String = "Tài khoản",
+    label: String,
 ) {
-    Column {
+    val colors = LocalPsyColors.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            modifier = Modifier.padding(bottom = 8.dp),
+            text = label.uppercase(),
+            fontFamily = PlexMono,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            letterSpacing = 1.6.sp,
+            color = colors.text3,
         )
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -598,6 +637,7 @@ private fun AccountSection(
                     account = account,
                     isSelected = account.id == selectedId,
                     onSelect = { onSelect(account.id) },
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -609,30 +649,33 @@ private fun AccountChip(
     account: Account,
     isSelected: Boolean,
     onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val colors = LocalPsyColors.current
     Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50.dp))
-            .background(
-                if (isSelected) CandyGreen.copy(alpha = 0.15f)
-                else MaterialTheme.colorScheme.surfaceVariant,
-            )
-            .border(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) CandyGreen else Color.Transparent,
-                shape = RoundedCornerShape(50.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (isSelected) colors.blueSoft else colors.sunken)
+            .then(
+                if (isSelected) Modifier.border(1.5.dp, colors.blue, RoundedCornerShape(8.dp))
+                else Modifier,
             )
             .clickable(onClick = onSelect)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(text = account.icon, fontSize = 16.sp)
-        Spacer(modifier = Modifier.width(4.dp))
+        LucideIcon(
+            name = account.icon,
+            tint = if (isSelected) colors.blue else colors.text2,
+            size = 18.dp,
+        )
         Text(
             text = account.name,
             fontSize = 13.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) CandyGreen else MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) colors.blue else colors.text2,
+            maxLines = 1,
         )
     }
 }
@@ -649,15 +692,18 @@ private fun PhotoSection(
     onRemoveClick: () -> Unit,
     onErrorDismiss: () -> Unit,
 ) {
+    val colors = LocalPsyColors.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Đính kèm ảnh",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            text = "ĐÍNH KÈM ẢNH",
+            fontFamily = PlexMono,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            letterSpacing = 1.6.sp,
+            color = colors.text3,
         )
 
         if (photoUri != null) {
-            // Show thumbnail with a remove (×) overlay
             Box(modifier = Modifier.size(96.dp)) {
                 AsyncImage(
                     model = photoUri,
@@ -667,7 +713,6 @@ private fun PhotoSection(
                         .size(96.dp)
                         .clip(RoundedCornerShape(12.dp)),
                 )
-                // Remove button in top-right corner
                 IconButton(
                     onClick = onRemoveClick,
                     modifier = Modifier
@@ -677,7 +722,7 @@ private fun PhotoSection(
                         .background(Color.Black.copy(alpha = 0.5f)),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        Lucide.X,
                         contentDescription = "Xoá ảnh",
                         tint = Color.White,
                         modifier = Modifier.size(14.dp),
@@ -685,35 +730,39 @@ private fun PhotoSection(
                 }
             }
         } else {
-            OutlinedButton(
-                onClick = onAttachClick,
-                shape = RoundedCornerShape(12.dp),
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, colors.hair, RoundedCornerShape(8.dp))
+                    .background(colors.surface)
+                    .clickable(onClick = onAttachClick)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "📷  Đính kèm ảnh")
+                Text(text = "Đính kèm ảnh", color = colors.text2, fontSize = 14.sp)
             }
         }
 
-        // Transient error banner
         if (errorMessage != null) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(CandyPinkDeep.copy(alpha = 0.1f))
+                    .background(colors.redSoft)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = errorMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CandyPinkDeep,
+                    fontSize = 12.sp,
+                    color = colors.red,
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = onErrorDismiss, modifier = Modifier.size(20.dp)) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        Lucide.X,
                         contentDescription = "Đóng",
-                        tint = CandyPinkDeep,
+                        tint = colors.red,
                         modifier = Modifier.size(14.dp),
                     )
                 }
@@ -732,57 +781,56 @@ private fun DateTimeSection(
     onPickDate: () -> Unit,
     onPickTime: () -> Unit,
 ) {
+    val colors = LocalPsyColors.current
     val zone = ZoneId.systemDefault()
     val zoned = if (dateMillis > 0L) Instant.ofEpochMilli(dateMillis).atZone(zone) else null
-    val dateLabel = zoned?.toLocalDate()?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-        ?: "Chọn ngày"
+    val dateLabel = zoned?.toLocalDate()?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "dd/MM/yyyy"
     val timeLabel = zoned?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: "--:--"
 
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Thời gian",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            modifier = Modifier.padding(bottom = 4.dp),
+            text = "THỜI GIAN",
+            fontFamily = PlexMono,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            letterSpacing = 1.6.sp,
+            color = colors.text3,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Date field
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(16.dp),
-                    )
-                    .clickable(onClick = onPickDate)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                Text(
-                    text = dateLabel,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            // Time field
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(16.dp),
-                    )
-                    .clickable(onClick = onPickTime)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                Text(
-                    text = timeLabel,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
+            ReadOnlyTimeField(
+                value = dateLabel,
+                onClick = onPickDate,
+                modifier = Modifier.weight(1f),
+            )
+            ReadOnlyTimeField(
+                value = timeLabel,
+                onClick = onPickTime,
+                modifier = Modifier,
+            )
         }
+    }
+}
+
+@Composable
+private fun ReadOnlyTimeField(
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalPsyColors.current
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, colors.hair, RoundedCornerShape(8.dp))
+            .background(colors.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Text(
+            text = value,
+            fontFamily = PlexMono,
+            fontSize = 15.sp,
+            color = colors.text,
+        )
     }
 }

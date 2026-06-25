@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,8 +24,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.psy.ui.theme.CandyGreen
-import com.psy.ui.theme.CandyPinkDeep
+import androidx.compose.ui.unit.sp
+import com.psy.ui.theme.LocalPsyColors
+import com.psy.ui.theme.PlexMono
 
 data class MonthBars(val label: String, val incomeMinor: Long, val expenseMinor: Long)
 
@@ -36,6 +37,9 @@ fun TrendBars(
 ) {
     if (months.isEmpty()) return
 
+    val colors = LocalPsyColors.current
+    val incomeColor = colors.green
+    val expenseColor = colors.red
     val maxVal = maxOf(1L, months.maxOf { maxOf(it.incomeMinor, it.expenseMinor) })
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -47,13 +51,13 @@ fun TrendBars(
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
         ) {
-            LegendDot(color = CandyGreen)
+            LegendDot(color = incomeColor)
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "Thu", style = MaterialTheme.typography.labelSmall)
+            Text(text = "THU", fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
             Spacer(modifier = Modifier.width(16.dp))
-            LegendDot(color = CandyPinkDeep)
+            LegendDot(color = expenseColor)
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "Chi", style = MaterialTheme.typography.labelSmall)
+            Text(text = "CHI", fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
         }
 
         // Bar chart canvas
@@ -75,20 +79,20 @@ fun TrendBars(
                 val incomeHeight = (monthBar.incomeMinor / maxVal.toFloat()) * canvasHeight
                 val expenseHeight = (monthBar.expenseMinor / maxVal.toFloat()) * canvasHeight
 
-                // Income bar (left, CandyGreen)
+                // Income bar (left, green)
                 if (incomeHeight > 0f) {
                     drawRoundRect(
-                        color = CandyGreen,
+                        color = incomeColor,
                         topLeft = Offset(slotLeft, canvasHeight - incomeHeight),
                         size = Size(barWidth, incomeHeight),
                         cornerRadius = cornerRadius,
                     )
                 }
 
-                // Expense bar (right, CandyPinkDeep)
+                // Expense bar (right, red)
                 if (expenseHeight > 0f) {
                     drawRoundRect(
-                        color = CandyPinkDeep,
+                        color = expenseColor,
                         topLeft = Offset(slotLeft + barWidth + barGap, canvasHeight - expenseHeight),
                         size = Size(barWidth, expenseHeight),
                         cornerRadius = cornerRadius,
@@ -106,7 +110,9 @@ fun TrendBars(
                 ) {
                     Text(
                         text = month.label,
-                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = PlexMono,
+                        fontSize = 11.sp,
+                        color = colors.text3,
                     )
                 }
             }
@@ -119,7 +125,7 @@ private fun LegendDot(color: Color) {
     Box(
         modifier = Modifier
             .size(10.dp)
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(3.dp))
             .drawBehind { drawCircle(color) },
     )
 }
