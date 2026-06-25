@@ -78,18 +78,18 @@ struct ManageCategoriesView: View {
 
     private var list: some View {
         List {
-            ForEach(vm.items) { category in
-                CategoryRow(category: category)
+            ForEach(vm.items) { group in
+                CategoryRow(group: group)
                     .listRowBackground(psyColors.background)
                     .listRowSeparator(.hidden)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        vm.startEdit(category)
+                        vm.startEdit(group)
                         editorOpen = true
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            vm.delete(category)
+                            vm.delete(group)
                         } label: {
                             Label("Xoá", systemImage: "trash")
                         }
@@ -103,22 +103,21 @@ struct ManageCategoriesView: View {
 
 private struct CategoryRow: View {
     @Environment(\.psyColors) private var psyColors
-    let category: PsyCore.Category
+    let group: CategoryGroup
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(category.icon)
-                .font(.system(size: 20))
+            LucideIcon(name: group.icon, size: 20, tint: Color(argb: group.color))
                 .frame(width: 40, height: 40)
-                .background(Circle().fill(Color(argb: category.color).opacity(0.25)))
-            Text(category.name)
+                .background(RoundedRectangle(cornerRadius: 11).fill(Color(argb: group.color).opacity(0.14)))
+            Text(group.name)
                 .font(PsyFont.titleMedium)
                 .foregroundStyle(psyColors.onSurface)
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: CandyShape.small).fill(psyColors.onSurface.opacity(0.05)))
+        .background(RoundedRectangle(cornerRadius: CandyShape.small).fill(psyColors.surface))
     }
 }
 

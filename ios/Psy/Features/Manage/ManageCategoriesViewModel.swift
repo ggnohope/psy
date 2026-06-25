@@ -11,13 +11,14 @@ final class ManageCategoriesViewModel {
     private let typeSubject = CurrentValueSubject<CategoryType, Never>(.expense)
 
     var type: CategoryType = .expense
-    var items: [PsyCore.Category] = []
+    // Top-level groups for the selected type. (Leaf editing UI lands with the re-skin.)
+    var items: [CategoryGroup] = []
 
     // Editor draft state
     var editingId: Int64?
     var draftName: String = ""
-    var draftIcon: String = "📦"
-    var draftColor: Int64 = 0xFFA18CFF
+    var draftIcon: String = "package"
+    var draftColor: Int64 = 0xFF0A7CF6
 
     init(container: AppContainer) {
         self.container = container
@@ -27,12 +28,12 @@ final class ManageCategoriesViewModel {
     private func start() {
         let c = container
         typeSubject
-            .map { type -> AnyPublisher<[PsyCore.Category], Never> in
-                c.categoryRepo.observeByType(type)
+            .map { type -> AnyPublisher<[CategoryGroup], Never> in
+                c.categoryGroupRepo.observeByType(type)
             }
             .switchToLatest()
             .receive(on: RunLoop.main)
-            .sink { [weak self] cats in self?.items = cats }
+            .sink { [weak self] groups in self?.items = groups }
             .store(in: &cancellables)
     }
 
@@ -48,15 +49,15 @@ final class ManageCategoriesViewModel {
     func startAdd() {
         editingId = nil
         draftName = ""
-        draftIcon = "📦"
-        draftColor = 0xFFA18CFF
+        draftIcon = "package"
+        draftColor = 0xFF0A7CF6
     }
 
-    func startEdit(_ category: PsyCore.Category) {
-        editingId = category.id
-        draftName = category.name
-        draftIcon = category.icon
-        draftColor = category.color
+    func startEdit(_ group: CategoryGroup) {
+        editingId = group.id
+        draftName = group.name
+        draftIcon = group.icon
+        draftColor = group.color
     }
 
     func save() {
@@ -64,13 +65,9 @@ final class ManageCategoriesViewModel {
         guard !trimmed.isEmpty else { return }
         let isNew = editingId == nil
         let maxSortOrder = items.map(\.sortOrder).max() ?? -1
-        let sortOrder: Int
-        if isNew {
-            sortOrder = maxSortOrder + 1
-        } else {
-            sortOrder = items.first(where: { $0.id == editingId })?.sortOrder ?? (maxSortOrder + 1)
-        }
-        let category = PsyCore.Category(
+        let sortOrder = isNew ? maxSortOrder + 1
+            : (items.first(where: { $0.id == editingId })?.sortOrder ?? (maxSortOrder + 1))
+        let group = CategoryGroup(
             id: editingId ?? 0,
             name: trimmed,
             icon: draftIcon,
@@ -78,10 +75,10 @@ final class ManageCategoriesViewModel {
             type: type,
             sortOrder: sortOrder
         )
-        container.categoryRepo.upsert(category)
+        container.categoryGroupRepo.upsert(group)
     }
 
-    func delete(_ category: PsyCore.Category) {
-        container.categoryRepo.delete(category)
+    func delete(_ group: CategoryGroup) {
+        container.categoryGroupRepo.delete(group)
     }
 }

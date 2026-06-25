@@ -57,7 +57,9 @@ final class AddEditViewModel {
     func reloadCategories() {
         guard type != .transfer else { categories = []; selectedCategoryId = nil; return }
         let target: CategoryType = (type == .income) ? .income : .expense
-        categories = container.categoryRepo.byType(target)
+        // Leaves belong to a parent group; filter leaves by their group's type.
+        let groupIds = Set(container.categoryGroupRepo.byType(target).map { $0.id })
+        categories = container.categoryRepo.all().filter { groupIds.contains($0.groupId) }
         if !categories.contains(where: { $0.id == selectedCategoryId }) { selectedCategoryId = nil }
     }
 

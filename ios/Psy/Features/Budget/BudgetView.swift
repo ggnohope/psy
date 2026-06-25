@@ -40,7 +40,7 @@ struct BudgetView: View {
                         categoryCard(item)
                     }
 
-                    if !vm.availableCategories.isEmpty || !vm.categoryBudgets.isEmpty {
+                    if !vm.availableGroups.isEmpty || !vm.categoryBudgets.isEmpty {
                         Button(action: vm.startAddCategory) {
                             Text("＋ Thêm ngân sách danh mục")
                                 .font(PsyFont.bodyMedium)
@@ -49,12 +49,12 @@ struct BudgetView: View {
                                 .padding(.vertical, 12)
                                 .background(
                                     RoundedRectangle(cornerRadius: CandyShape.medium)
-                                        .stroke(psyColors.primary.opacity(vm.availableCategories.isEmpty ? 0.3 : 1), lineWidth: 1.5)
+                                        .stroke(psyColors.primary.opacity(vm.availableGroups.isEmpty ? 0.3 : 1), lineWidth: 1.5)
                                 )
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(psyColors.primary.opacity(vm.availableCategories.isEmpty ? 0.4 : 1))
-                        .disabled(vm.availableCategories.isEmpty)
+                        .foregroundStyle(psyColors.primary.opacity(vm.availableGroups.isEmpty ? 0.4 : 1))
+                        .disabled(vm.availableGroups.isEmpty)
                     }
 
                     Spacer(minLength: 16)
@@ -123,9 +123,9 @@ struct BudgetView: View {
         Button { vm.startEdit(item.budget) } label: {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
-                    Text(item.category?.icon ?? "📦")
-                        .font(PsyFont.titleMedium)
-                    Text(item.category?.name ?? "Danh mục")
+                    LucideIcon(name: item.group?.icon ?? "circle-dollar-sign", size: 20,
+                               tint: Color(argb: item.group?.color ?? 0xFF0A7CF6))
+                    Text(item.group?.name ?? "Danh mục")
                         .font(PsyFont.titleMedium)
                         .fontWeight(.medium)
                         .foregroundStyle(psyColors.onSurface)
@@ -159,8 +159,8 @@ struct BudgetView: View {
                         Text("Chọn danh mục")
                             .font(PsyFont.bodyMedium)
                             .foregroundStyle(psyColors.onSurface.opacity(0.7))
-                        FlexibleChips(categories: vm.availableCategories,
-                                      selectedId: vm.editorCategoryId) { vm.selectEditorCategory($0) }
+                        FlexibleChips(groups: vm.availableGroups,
+                                      selectedId: vm.editorGroupId) { vm.selectEditorGroup($0) }
                     }
 
                     Text("Số tiền (\(vm.currency.symbol))")
@@ -221,23 +221,27 @@ struct BudgetView: View {
 
 /// Simple wrapping chip row for the category picker (FlowRow analog).
 private struct FlexibleChips: View {
-    let categories: [PsyCore.Category]
+    let groups: [CategoryGroup]
     let selectedId: Int64?
     let onSelect: (Int64) -> Void
     @Environment(\.psyColors) private var psyColors
 
     var body: some View {
         FlowLayout(spacing: 8) {
-            ForEach(categories) { cat in
-                let selected = selectedId == cat.id
-                Button { onSelect(cat.id) } label: {
-                    Text("\(cat.icon) \(cat.name)")
-                        .font(PsyFont.bodyMedium)
-                        .foregroundStyle(selected ? .white : psyColors.onSurface.opacity(0.8))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(selected ? psyColors.primary : psyColors.onSurface.opacity(0.08))
-                        .clipShape(Capsule())
+            ForEach(groups) { group in
+                let selected = selectedId == group.id
+                Button { onSelect(group.id) } label: {
+                    HStack(spacing: 6) {
+                        LucideIcon(name: group.icon, size: 15,
+                                   tint: selected ? .white : psyColors.onSurface.opacity(0.8))
+                        Text(group.name)
+                            .font(PsyFont.bodyMedium)
+                            .foregroundStyle(selected ? .white : psyColors.onSurface.opacity(0.8))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(selected ? psyColors.primary : psyColors.onSurface.opacity(0.08))
+                    .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
