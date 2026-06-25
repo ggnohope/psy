@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.psy.ui.theme.LocalPsyColors
 import com.psy.ui.addedit.AddEditTransactionScreen
 import com.psy.ui.budget.BudgetScreen
 import com.psy.ui.calendar.CalendarScreen
@@ -33,6 +34,7 @@ fun PsyNavHost(onLogout: () -> Unit) {
     val currentRoute = backStackEntry?.destination?.route
 
     Scaffold(
+        containerColor = LocalPsyColors.current.bg,
         bottomBar = {
             if (currentRoute in bottomBarRoutes) {
                 PsyBottomBar(currentRoute = currentRoute) { route ->
