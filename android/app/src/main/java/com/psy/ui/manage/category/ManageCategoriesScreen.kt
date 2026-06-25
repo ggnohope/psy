@@ -50,7 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.psy.domain.model.Category
 import com.psy.domain.model.CategoryType
 import com.psy.ui.components.ColorPicker
-import com.psy.ui.components.EmojiPicker
+import com.psy.ui.components.IconPicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -428,7 +428,7 @@ private fun GroupEditor(
         )
 
         Text(text = "Biểu tượng", style = MaterialTheme.typography.labelLarge)
-        EmojiPicker(
+        IconPicker(
             selected = state.groupDraftIcon,
             onPick = onIconChange,
         )
@@ -489,7 +489,7 @@ private fun LeafEditor(
         )
 
         Text(text = "Biểu tượng", style = MaterialTheme.typography.labelLarge)
-        EmojiPicker(
+        IconPicker(
             selected = state.leafDraftIcon,
             onPick = onIconChange,
         )

@@ -48,7 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.psy.domain.model.Account
 import com.psy.domain.model.AccountType
 import com.psy.ui.components.ColorPicker
-import com.psy.ui.components.EmojiPicker
+import com.psy.ui.components.IconPicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -233,7 +233,7 @@ private fun AccountEditor(
         }
 
         Text(text = "Biểu tượng", style = MaterialTheme.typography.labelLarge)
-        EmojiPicker(
+        IconPicker(
             selected = state.draftIcon,
             onPick = onIconChange,
         )
