@@ -55,6 +55,8 @@ object LucideIcons {
         "beer" to Lucide.Beer,
         "clapperboard" to Lucide.Clapperboard,
         "chart-column" to Lucide.ChartColumn,
+        "arrow-right-left" to Lucide.ArrowRightLeft,
+        "list" to Lucide.List,
     )
 
     /** Icons offered in the picker (ordered). Extend freely. */

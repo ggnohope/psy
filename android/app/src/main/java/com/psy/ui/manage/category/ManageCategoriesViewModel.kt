@@ -33,14 +33,14 @@ data class ManageCategoriesUiState(
     val groupEditorOpen: Boolean = false,
     val editingGroupId: Long? = null,
     val groupDraftName: String = "",
-    val groupDraftIcon: String = "📦",
+    val groupDraftIcon: String = "package",
     val groupDraftColor: Long = 0xFFA18CFF,
     // leaf editor
     val leafEditorOpen: Boolean = false,
     val editingLeafId: Long? = null,
     val leafParentGroupId: Long? = null,
     val leafDraftName: String = "",
-    val leafDraftIcon: String = "📦",
+    val leafDraftIcon: String = "package",
     // delete
     val pendingDeleteGroup: CategoryGroup? = null,
     val pendingDeleteLeaf: Category? = null,
@@ -61,7 +61,7 @@ class ManageCategoriesViewModel @Inject constructor(
     private val _groupEditorOpen = MutableStateFlow(false)
     private val _editingGroupId = MutableStateFlow<Long?>(null)
     private val _groupDraftName = MutableStateFlow("")
-    private val _groupDraftIcon = MutableStateFlow("📦")
+    private val _groupDraftIcon = MutableStateFlow("package")
     private val _groupDraftColor = MutableStateFlow(0xFFA18CFFL)
 
     // leaf editor
@@ -69,7 +69,7 @@ class ManageCategoriesViewModel @Inject constructor(
     private val _editingLeafId = MutableStateFlow<Long?>(null)
     private val _leafParentGroupId = MutableStateFlow<Long?>(null)
     private val _leafDraftName = MutableStateFlow("")
-    private val _leafDraftIcon = MutableStateFlow("📦")
+    private val _leafDraftIcon = MutableStateFlow("package")
 
     // delete
     private val _pendingDeleteGroup = MutableStateFlow<CategoryGroup?>(null)
@@ -186,7 +186,7 @@ class ManageCategoriesViewModel @Inject constructor(
     fun startAddGroup() {
         _editingGroupId.value = null
         _groupDraftName.value = ""
-        _groupDraftIcon.value = "📦"
+        _groupDraftIcon.value = "package"
         _groupDraftColor.value = 0xFFA18CFFL
         _groupEditorOpen.value = true
     }
@@ -244,7 +244,7 @@ class ManageCategoriesViewModel @Inject constructor(
         _editingLeafId.value = null
         _leafParentGroupId.value = groupId
         _leafDraftName.value = ""
-        _leafDraftIcon.value = "📦"
+        _leafDraftIcon.value = "package"
         _leafEditorOpen.value = true
     }
 
