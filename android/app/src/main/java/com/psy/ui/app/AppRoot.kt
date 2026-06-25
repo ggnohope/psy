@@ -25,6 +25,7 @@ fun AppRoot() {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val locked by vm.isLocked.collectAsStateWithLifecycle()
     val signedIn by vm.isSignedIn.collectAsStateWithLifecycle()
+    val preparingData by vm.isPreparingData.collectAsStateWithLifecycle()
 
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
@@ -43,6 +44,7 @@ fun AppRoot() {
         when {
             signedIn == null -> LoadingGate()            // unknown yet → avoid LoginScreen flash
             signedIn == false -> LoginScreen(viewModel = vm)
+            preparingData -> LoadingGate()
             locked -> LockScreen(
                 onUnlock = vm::unlock,
                 biometricEnabled = settings.biometricEnabled,
