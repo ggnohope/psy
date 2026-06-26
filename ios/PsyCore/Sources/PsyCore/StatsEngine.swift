@@ -22,6 +22,7 @@ public struct AccountStat: Identifiable, Sendable {
     public let incomeMinor: Int64
     public let expenseMinor: Int64
     public let netMinor: Int64
+    public let isFund: Bool
 }
 
 public struct StatsResult: Sendable {
@@ -64,12 +65,21 @@ public enum StatsEngine {
         let accountBreakdown: [AccountStat] = byAccount.compactMap { id, sums in
             guard let acc = accMap[id] else { return nil }
             return AccountStat(id: acc.id, name: acc.name, icon: acc.icon, color: acc.color,
-                               incomeMinor: sums.inc, expenseMinor: sums.exp, netMinor: sums.inc - sums.exp)
+                               incomeMinor: sums.inc, expenseMinor: sums.exp, netMinor: sums.inc - sums.exp,
+                               isFund: acc.isFund)
         }.sorted { ($0.incomeMinor + $0.expenseMinor) > ($1.incomeMinor + $1.expenseMinor) }
 
         // Drop filter if the account no longer exists.
         let effectiveFilter = accountFilter.flatMap { accMap[$0] != nil ? $0 : nil }
-        let filteredWindow = effectiveFilter == nil ? windowTransactions : windowTransactions.filter { $0.accountId == effectiveFilter }
+        let fundIds = Set(accounts.filter { $0.isFund }.map { $0.id })
+        // "All accounts" view excludes fund txns; explicitly filtering to one account
+        // (even a fund) shows that account's real numbers.
+        let filteredWindow: [Transaction]
+        if let f = effectiveFilter {
+            filteredWindow = windowTransactions.filter { $0.accountId == f }
+        } else {
+            filteredWindow = windowTransactions.filter { !fundIds.contains($0.accountId) }
+        }
         let monthTxns = filteredWindow.filter { $0.date >= monthStart && $0.date < monthEnd }
 
         // ── Summary ──

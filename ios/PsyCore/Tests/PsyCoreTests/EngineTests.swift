@@ -155,4 +155,38 @@ final class EngineTests: XCTestCase {
         XCTAssertFalse(AddEditLogic.canSave(amountText: "10", type: .transfer, categoryId: nil, accountId: 1, toAccountId: 1)) // same acct
         XCTAssertTrue(AddEditLogic.canSave(amountText: "10", type: .transfer, categoryId: nil, accountId: 1, toAccountId: 2))
     }
+
+    func testFundAccountExcludedFromSummaryButKeptInBreakdown() {
+        let cal = Calendar(identifier: .gregorian)
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let month = PsyMonth.current(cal, now: now)
+        let mid = month.startMillis(cal) + 86_400_000
+
+        let normal = Account(id: 1, name: "Tiền mặt", type: .cash, icon: "wallet", color: 0)
+        let fund = Account(id: 2, name: "M2", type: .cash, icon: "wallet", color: 0, isFund: true)
+        let group = CategoryGroup(id: 10, name: "Ăn uống", icon: "utensils", color: 0, type: .expense, sortOrder: 0)
+        let leaf = Category(id: 100, groupId: 10, name: "Cà phê", icon: "coffee", sortOrder: 0)
+
+        let txNormal = Transaction(id: 1, ledgerId: 1, type: .expense, amountMinor: 7_000,
+                                   categoryId: 100, accountId: 1, note: "", date: mid,
+                                   createdAt: mid, updatedAt: mid)
+        let txFund = Transaction(id: 2, ledgerId: 1, type: .expense, amountMinor: 100_000,
+                                 categoryId: 100, accountId: 2, note: "", date: mid,
+                                 createdAt: mid, updatedAt: mid)
+
+        let r = StatsEngine.build(windowTransactions: [txNormal, txFund], categories: [leaf],
+                                  groups: [group], accounts: [normal, fund], month: month,
+                                  pieMode: .expense, accountFilter: nil, calendar: cal, now: now)
+        XCTAssertEqual(r.summary.expenseMinor, 7_000)
+        XCTAssertEqual(r.slices.reduce(Int64(0)) { $0 + $1.amountMinor }, 7_000)
+        let m2 = r.accountBreakdown.first { $0.id == 2 }
+        XCTAssertNotNil(m2)
+        XCTAssertTrue(m2!.isFund)
+        XCTAssertEqual(m2!.expenseMinor, 100_000)
+
+        let filtered = StatsEngine.build(windowTransactions: [txNormal, txFund], categories: [leaf],
+                                         groups: [group], accounts: [normal, fund], month: month,
+                                         pieMode: .expense, accountFilter: 2, calendar: cal, now: now)
+        XCTAssertEqual(filtered.summary.expenseMinor, 100_000)
+    }
 }
