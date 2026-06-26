@@ -11,17 +11,18 @@ public struct TxRow: Identifiable, Hashable, Sendable {
     /// Transaction time-of-day formatted as HH:mm. Mirrors Android.
     public let timeLabel: String
     public let accountName: String
+    public let isFund: Bool
     public let toAccountName: String?
     public let type: TxType
     public let amountMinor: Int64
     public let note: String
     public let photoUri: String?
     public init(id: Int64, title: String, icon: String, groupName: String = "", timeLabel: String = "",
-                accountName: String, toAccountName: String?,
+                accountName: String, isFund: Bool = false, toAccountName: String?,
                 type: TxType, amountMinor: Int64, note: String, photoUri: String?) {
         self.id = id; self.title = title; self.icon = icon
         self.groupName = groupName; self.timeLabel = timeLabel
-        self.accountName = accountName; self.toAccountName = toAccountName
+        self.accountName = accountName; self.isFund = isFund; self.toAccountName = toAccountName
         self.type = type; self.amountMinor = amountMinor
         self.note = note; self.photoUri = photoUri
     }
@@ -108,7 +109,7 @@ public enum TxRowBuilder {
             let group = leaf.flatMap { groups[$0.groupId] }
             return TxRow(id: tx.id, title: leaf?.name ?? "—", icon: leaf?.icon ?? "📦",
                          groupName: group?.name ?? "", timeLabel: time,
-                         accountName: acc?.name ?? "—", toAccountName: nil,
+                         accountName: acc?.name ?? "—", isFund: acc?.isFund ?? false, toAccountName: nil,
                          type: tx.type, amountMinor: tx.amountMinor, note: tx.note, photoUri: tx.photoUri)
         }
     }

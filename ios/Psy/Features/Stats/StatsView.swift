@@ -166,6 +166,13 @@ struct StatsView: View {
                             .lineLimit(1)
                             .foregroundStyle(psyColors.text)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                        if stat.isFund {
+                            Text("Quỹ")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(psyColors.text3)
+                                .padding(.horizontal, 6).padding(.vertical, 1)
+                                .background(psyColors.text3.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                        }
                         Text(vm.currency.format(stat.netMinor))
                             .font(PsyFont.display(15))
                             .foregroundStyle(stat.netMinor >= 0 ? psyColors.green : psyColors.red)

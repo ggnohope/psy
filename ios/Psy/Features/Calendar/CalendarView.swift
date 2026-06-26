@@ -190,7 +190,8 @@ struct CalendarView: View {
             meta: meta,
             amount: amountSign(row.type) + vm.currency.format(row.amountMinor),
             isIncome: isIncome,
-            account: row.accountName
+            account: row.accountName,
+            isFund: row.isFund
         )
     }
 
