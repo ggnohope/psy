@@ -56,6 +56,7 @@ fun TransactionRow(
     amount: String,
     isIncome: Boolean,
     account: String,
+    isFund: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -85,6 +86,19 @@ fun TransactionRow(
                 color = if (isIncome) colors.green else colors.red,
             )
             Text(account, color = colors.text3, fontSize = 11.sp)
+            if (isFund) {
+                Text(
+                    "Quỹ",
+                    color = colors.text3,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(colors.text3.copy(alpha = 0.12f))
+                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                )
+            }
         }
     }
 }

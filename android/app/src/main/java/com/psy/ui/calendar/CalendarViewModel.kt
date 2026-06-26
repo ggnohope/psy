@@ -45,6 +45,7 @@ data class CalendarTxRow(
     /** Transaction time-of-day formatted as HH:mm. */
     val timeLabel: String = "",
     val accountName: String,
+    val isFund: Boolean = false,
     val toAccountName: String? = null,
     val type: TxType,
     val amountMinor: Long,
@@ -197,6 +198,7 @@ class CalendarViewModel @Inject constructor(
                                         groupName = group?.name ?: "",
                                         timeLabel = timeLabel,
                                         accountName = acc?.name ?: "—",
+                                        isFund = acc?.isFund == true,
                                         toAccountName = null,
                                         type = tx.type,
                                         amountMinor = tx.amountMinor,

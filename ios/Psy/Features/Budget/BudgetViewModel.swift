@@ -65,14 +65,15 @@ final class BudgetViewModel {
                 let currency = Currency.of(ledger.currency)
                 let start = month.startMillis(cal)
                 let end = month.endMillis(cal)
+                let catsAndGroups = c.categoryRepo.observeAll().combineLatest(c.categoryGroupRepo.observeByType(.expense))
                 return Publishers.CombineLatest4(
                     c.transactionRepo.observeBetween(ledgerId: ledger.id, start: start, end: end),
                     c.budgetRepo.observeAll(ledgerId: ledger.id),
-                    c.categoryRepo.observeAll(),
-                    c.categoryGroupRepo.observeByType(.expense)
+                    catsAndGroups,
+                    c.accountRepo.observeAll()
                 )
-                .map { txns, budgets, cats, groups in
-                    let result = BudgetEngine.build(monthTransactions: txns, budgets: budgets, categories: cats, groups: groups)
+                .map { txns, budgets, cg, accts in
+                    let result = BudgetEngine.build(monthTransactions: txns, budgets: budgets, categories: cg.0, groups: cg.1, accounts: accts)
                     return (ledger.id, currency, month, result)
                 }
                 .eraseToAnyPublisher()

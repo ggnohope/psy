@@ -363,6 +363,18 @@ private fun AccountBreakdownRow(
                     maxLines = 1,
                     modifier = Modifier.weight(1f),
                 )
+                if (stat.isFund) {
+                    Text(
+                        "Quỹ",
+                        color = colors.text3,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(colors.text3.copy(alpha = 0.12f))
+                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                    )
+                }
                 Text(
                     text = Money.formatMinor(stat.netMinor, currency.fractionDigits, currency.symbol),
                     fontFamily = SpaceGrotesk,

@@ -20,8 +20,9 @@ final class AccountEntity {
     var type: String
     var icon: String
     var color: Int64
-    init(id: Int64, name: String, type: String, icon: String, color: Int64) {
-        self.id = id; self.name = name; self.type = type; self.icon = icon; self.color = color
+    var isFund: Bool = false
+    init(id: Int64, name: String, type: String, icon: String, color: Int64, isFund: Bool = false) {
+        self.id = id; self.name = name; self.type = type; self.icon = icon; self.color = color; self.isFund = isFund
     }
 }
 

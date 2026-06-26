@@ -179,7 +179,8 @@ struct HomeView: View {
                 meta: meta,
                 amount: signedAmount(row),
                 isIncome: row.type == .income,
-                account: row.accountName
+                account: row.accountName,
+                isFund: row.isFund
             )
         }
         .buttonStyle(.plain)

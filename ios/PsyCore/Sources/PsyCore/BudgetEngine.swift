@@ -28,12 +28,14 @@ public enum BudgetEngine {
     /// Spent for a per-group budget = sum of EXPENSE tx whose leaf's groupId == budget.groupId.
     /// `groups` should already be the EXPENSE groups (Android queries observeByType(EXPENSE)).
     public static func build(monthTransactions: [Transaction], budgets: [Budget],
-                             categories: [Category], groups: [CategoryGroup]) -> BudgetResult {
+                             categories: [Category], groups: [CategoryGroup], accounts: [Account]) -> BudgetResult {
         let groupMap = Dictionary(groups.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         // leafId → groupId so each EXPENSE tx can be attributed to its parent group.
         let leafToGroup = Dictionary(categories.map { ($0.id, $0.groupId) }, uniquingKeysWith: { a, _ in a })
+        let fundIds = Set(accounts.filter { $0.isFund }.map { $0.id })
 
-        let expenseTxns = monthTransactions.filter { $0.type == .expense }
+        // Spent excludes fund-account txns (consistent with Stats "Ngân sách x").
+        let expenseTxns = monthTransactions.filter { $0.type == .expense && !fundIds.contains($0.accountId) }
         let totalSpent = expenseTxns.reduce(Int64(0)) { $0 + $1.amountMinor }
 
         let totalBudget = budgets.first { $0.groupId == nil }

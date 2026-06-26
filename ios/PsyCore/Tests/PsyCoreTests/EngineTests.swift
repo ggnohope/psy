@@ -95,7 +95,7 @@ final class EngineTests: XCTestCase {
         ]
         let budgets = [Budget(id: 1, ledgerId: 1, groupId: nil, amountMinor: 1000)]
         let r = BudgetEngine.build(monthTransactions: txns, budgets: budgets,
-                                   categories: [cat(20, "Ăn", group: 200)], groups: [grp(200, "Ăn uống", .expense)])
+                                   categories: [cat(20, "Ăn", group: 200)], groups: [grp(200, "Ăn uống", .expense)], accounts: [])
         XCTAssertEqual(r.total?.spentMinor, 700)   // income + transfer excluded
         XCTAssertEqual(r.total?.percent ?? 0, 0.7, accuracy: 0.0001)
     }
@@ -110,7 +110,7 @@ final class EngineTests: XCTestCase {
         let cats = [cat(20, "Phở", group: 200), cat(21, "Cơm", group: 200), cat(30, "Xăng", group: 300)]
         let groups = [grp(200, "Ăn uống", .expense), grp(300, "Di chuyển", .expense)]
         let budgets = [Budget(id: 5, ledgerId: 1, groupId: 200, amountMinor: 1000)]
-        let r = BudgetEngine.build(monthTransactions: txns, budgets: budgets, categories: cats, groups: groups)
+        let r = BudgetEngine.build(monthTransactions: txns, budgets: budgets, categories: cats, groups: groups, accounts: [])
         let item = r.categoryBudgets.first { $0.budget.groupId == 200 }
         XCTAssertEqual(item?.spentMinor, 500)               // 300 + 200, group 300 excluded
         XCTAssertEqual(item?.group?.name, "Ăn uống")
@@ -154,5 +154,56 @@ final class EngineTests: XCTestCase {
         XCTAssertTrue(AddEditLogic.canSave(amountText: "10", type: .expense, categoryId: 1, accountId: 1, toAccountId: nil))
         XCTAssertFalse(AddEditLogic.canSave(amountText: "10", type: .transfer, categoryId: nil, accountId: 1, toAccountId: 1)) // same acct
         XCTAssertTrue(AddEditLogic.canSave(amountText: "10", type: .transfer, categoryId: nil, accountId: 1, toAccountId: 2))
+    }
+
+    func testBudgetExcludesFundAccounts() {
+        let normal = Account(id: 1, name: "Tiền mặt", type: .cash, icon: "wallet", color: 0)
+        let fund = Account(id: 2, name: "M2", type: .cash, icon: "wallet", color: 0, isFund: true)
+        let group = CategoryGroup(id: 10, name: "Ăn uống", icon: "utensils", color: 0, type: .expense, sortOrder: 0)
+        let leaf = Category(id: 100, groupId: 10, name: "Cà phê", icon: "coffee", sortOrder: 0)
+        let t = Int64(1_750_000_000_000)
+        let txNormal = Transaction(id: 1, ledgerId: 1, type: .expense, amountMinor: 7_000,
+                                   categoryId: 100, accountId: 1, note: "", date: t, createdAt: t, updatedAt: t)
+        let txFund = Transaction(id: 2, ledgerId: 1, type: .expense, amountMinor: 100_000,
+                                 categoryId: 100, accountId: 2, note: "", date: t, createdAt: t, updatedAt: t)
+        let totalBudget = Budget(id: 1, ledgerId: 1, groupId: nil, amountMinor: 1_000_000)
+
+        let r = BudgetEngine.build(monthTransactions: [txNormal, txFund], budgets: [totalBudget],
+                                   categories: [leaf], groups: [group], accounts: [normal, fund])
+        XCTAssertEqual(r.total?.spentMinor, 7_000) // fund tx excluded
+    }
+
+    func testFundAccountExcludedFromSummaryButKeptInBreakdown() {
+        let cal = Calendar(identifier: .gregorian)
+        let now = Date(timeIntervalSince1970: 1_750_000_000)
+        let month = PsyMonth.current(cal, now: now)
+        let mid = month.startMillis(cal) + 86_400_000
+
+        let normal = Account(id: 1, name: "Tiền mặt", type: .cash, icon: "wallet", color: 0)
+        let fund = Account(id: 2, name: "M2", type: .cash, icon: "wallet", color: 0, isFund: true)
+        let group = CategoryGroup(id: 10, name: "Ăn uống", icon: "utensils", color: 0, type: .expense, sortOrder: 0)
+        let leaf = Category(id: 100, groupId: 10, name: "Cà phê", icon: "coffee", sortOrder: 0)
+
+        let txNormal = Transaction(id: 1, ledgerId: 1, type: .expense, amountMinor: 7_000,
+                                   categoryId: 100, accountId: 1, note: "", date: mid,
+                                   createdAt: mid, updatedAt: mid)
+        let txFund = Transaction(id: 2, ledgerId: 1, type: .expense, amountMinor: 100_000,
+                                 categoryId: 100, accountId: 2, note: "", date: mid,
+                                 createdAt: mid, updatedAt: mid)
+
+        let r = StatsEngine.build(windowTransactions: [txNormal, txFund], categories: [leaf],
+                                  groups: [group], accounts: [normal, fund], month: month,
+                                  pieMode: .expense, accountFilter: nil, calendar: cal, now: now)
+        XCTAssertEqual(r.summary.expenseMinor, 7_000)
+        XCTAssertEqual(r.slices.reduce(Int64(0)) { $0 + $1.amountMinor }, 7_000)
+        let m2 = r.accountBreakdown.first { $0.id == 2 }
+        XCTAssertNotNil(m2)
+        XCTAssertTrue(m2!.isFund)
+        XCTAssertEqual(m2!.expenseMinor, 100_000)
+
+        let filtered = StatsEngine.build(windowTransactions: [txNormal, txFund], categories: [leaf],
+                                         groups: [group], accounts: [normal, fund], month: month,
+                                         pieMode: .expense, accountFilter: 2, calendar: cal, now: now)
+        XCTAssertEqual(filtered.summary.expenseMinor, 100_000)
     }
 }

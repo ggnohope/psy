@@ -3,6 +3,8 @@ package com.psy.ui.manage.account
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -47,6 +50,7 @@ import com.psy.domain.model.AccountType
 import com.psy.ui.components.ColorPicker
 import com.psy.ui.components.EmptyState
 import com.psy.ui.components.IconPicker
+import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.components.IconTile
 import com.psy.ui.theme.LocalPsyColors
 import com.psy.ui.theme.PlexMono
@@ -110,6 +114,7 @@ fun ManageAccountsScreen(
                 onTypeChange = viewModel::onTypeChange,
                 onIconChange = viewModel::onIconChange,
                 onColorChange = viewModel::onColorChange,
+                onIsFundChange = viewModel::onIsFundChange,
                 onSave = viewModel::saveEditor,
                 onCancel = viewModel::closeEditor,
             )
@@ -171,12 +176,14 @@ private fun AccountEditor(
     onTypeChange: (AccountType) -> Unit,
     onIconChange: (String) -> Unit,
     onColorChange: (Long) -> Unit,
+    onIsFundChange: (Boolean) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val colors = LocalPsyColors.current
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 32.dp),
+        modifier = Modifier.fillMaxWidth().clearFocusOnTap().verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp).padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
@@ -197,6 +204,20 @@ private fun AccountEditor(
                     label = { Text(type.toVietnamese()) },
                 )
             }
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Quỹ", color = colors.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(
+                    "Không tính vào thu/chi & ngân sách",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.text3,
+                )
+            }
+            Switch(checked = state.draftIsFund, onCheckedChange = onIsFundChange)
         }
         Text(text = "Biểu tượng", style = MaterialTheme.typography.labelLarge, color = colors.text2)
         IconPicker(selected = state.draftIcon, onPick = onIconChange)

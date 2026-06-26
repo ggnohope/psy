@@ -278,6 +278,7 @@ private fun CalendarTxRow(
         amount = "$sign${Money.formatMinor(row.amountMinor, fractionDigits, symbol)}",
         isIncome = isIncome,
         account = if (row.type == TxType.TRANSFER) "" else row.accountName,
+        isFund = row.isFund,
         onClick = {},
     )
 }

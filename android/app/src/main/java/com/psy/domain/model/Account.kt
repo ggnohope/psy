@@ -6,4 +6,5 @@ data class Account(
     val type: AccountType,
     val icon: String,
     val color: Long, // ARGB packed
+    val isFund: Boolean = false, // fund (quỹ): excluded from income/expense stats & budget
 )

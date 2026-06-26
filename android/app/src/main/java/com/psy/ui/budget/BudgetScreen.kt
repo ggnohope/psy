@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +55,7 @@ import com.psy.domain.util.Money
 import com.psy.ui.components.BudgetProgress
 import com.psy.ui.components.EmptyState
 import com.psy.ui.components.EyebrowLabel
+import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.components.IconTile
 import com.psy.ui.components.MonthSelector
 import com.psy.ui.theme.LocalPsyColors
@@ -312,6 +315,8 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clearFocusOnTap()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 22.dp)
                         .padding(bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),

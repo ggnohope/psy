@@ -1,5 +1,6 @@
 package com.psy.ui.app
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -8,6 +9,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.Lifecycle.Event.ON_START
 import androidx.lifecycle.Lifecycle.Event.ON_STOP
 import androidx.lifecycle.LifecycleEventObserver
@@ -41,16 +44,28 @@ fun AppRoot() {
     }
 
     PsyTheme(themeMode = settings.themeMode, accent = settings.accent) {
-        when {
-            signedIn == null -> LoadingGate()            // unknown yet → avoid LoginScreen flash
-            signedIn == false -> LoginScreen(viewModel = vm)
-            preparingData -> LoadingGate()
-            locked -> LockScreen(
-                onUnlock = vm::unlock,
-                biometricEnabled = settings.biometricEnabled,
-                verifyPin = { vm.verifyPin(it) },
-            )
-            else -> PsyNavHost(onLogout = { vm.logout() })
+        val focusManager = LocalFocusManager.current
+        // Tap anywhere outside a focused text field to dismiss the keyboard (app-wide).
+        // detectTapGestures only fires for taps the children didn't consume, so buttons,
+        // list rows, scrolling, etc. are unaffected.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                }
+        ) {
+            when {
+                signedIn == null -> LoadingGate()            // unknown yet → avoid LoginScreen flash
+                signedIn == false -> LoginScreen(viewModel = vm)
+                preparingData -> LoadingGate()
+                locked -> LockScreen(
+                    onUnlock = vm::unlock,
+                    biometricEnabled = settings.biometricEnabled,
+                    verifyPin = { vm.verifyPin(it) },
+                )
+                else -> PsyNavHost(onLogout = { vm.logout() })
+            }
         }
     }
 }

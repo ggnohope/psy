@@ -90,6 +90,7 @@ struct TransactionRowView: View {
     let amount: String
     let isIncome: Bool
     let account: String
+    var isFund: Bool = false
     @Environment(\.psyColors) private var psyColors
 
     var body: some View {
@@ -103,6 +104,14 @@ struct TransactionRowView: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text(amount).font(PsyFont.display(15)).foregroundStyle(isIncome ? psyColors.green : psyColors.red)
                 Text(account).font(.system(size: 11)).foregroundStyle(psyColors.text3)
+                if isFund {
+                    Text("Quỹ")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(psyColors.text3)
+                        .padding(.horizontal, 6).padding(.vertical, 1)
+                        .background(psyColors.text3.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                        .padding(.top, 2)
+                }
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 13)

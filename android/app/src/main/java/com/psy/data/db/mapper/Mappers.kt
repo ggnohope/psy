@@ -3,8 +3,8 @@ package com.psy.data.db.mapper
 import com.psy.data.db.entity.*
 import com.psy.domain.model.*
 
-fun AccountEntity.toDomain() = Account(id, name, AccountType.valueOf(type), icon, color)
-fun Account.toEntity() = AccountEntity(id, name, type.name, icon, color)
+fun AccountEntity.toDomain() = Account(id, name, AccountType.valueOf(type), icon, color, isFund)
+fun Account.toEntity() = AccountEntity(id, name, type.name, icon, color, isFund)
 
 fun CategoryGroupEntity.toDomain() = CategoryGroup(id, name, icon, color, CategoryType.valueOf(type), sortOrder)
 fun CategoryGroup.toEntity() = CategoryGroupEntity(id, name, icon, color, type.name, sortOrder)

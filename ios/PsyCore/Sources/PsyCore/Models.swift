@@ -16,8 +16,9 @@ public struct Account: Identifiable, Hashable, Sendable {
     public var type: AccountType
     public var icon: String
     public var color: Int64 // ARGB packed
-    public init(id: Int64 = 0, name: String, type: AccountType, icon: String, color: Int64) {
-        self.id = id; self.name = name; self.type = type; self.icon = icon; self.color = color
+    public var isFund: Bool // fund (quỹ): excluded from income/expense stats & budget
+    public init(id: Int64 = 0, name: String, type: AccountType, icon: String, color: Int64, isFund: Bool = false) {
+        self.id = id; self.name = name; self.type = type; self.icon = icon; self.color = color; self.isFund = isFund
     }
 }
 
