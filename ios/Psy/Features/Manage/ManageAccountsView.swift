@@ -136,6 +136,20 @@ private struct AccountEditorSheet: View {
                         EyebrowLabel(text: "Màu sắc")
                         ColorPicker(selected: vm.draftColor) { vm.draftColor = $0 }
                     }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle(isOn: $vm.draftIsFund) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Quỹ")
+                                    .font(PsyFont.bodyLarge.weight(.semibold))
+                                    .foregroundStyle(psyColors.text)
+                                Text("Không tính vào thu/chi & ngân sách")
+                                    .font(PsyFont.bodyMedium)
+                                    .foregroundStyle(psyColors.text3)
+                            }
+                        }
+                        .tint(psyColors.blue)
+                    }
                 }
                 .padding(22)
             }

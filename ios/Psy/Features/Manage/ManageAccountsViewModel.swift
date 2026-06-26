@@ -17,6 +17,7 @@ final class ManageAccountsViewModel {
     var draftType: AccountType = .cash
     var draftIcon: String = "💵"
     var draftColor: Int64 = 0xFF22C55E
+    var draftIsFund: Bool = false
 
     init(container: AppContainer) {
         self.container = container
@@ -38,6 +39,7 @@ final class ManageAccountsViewModel {
         draftType = .cash
         draftIcon = "💵"
         draftColor = 0xFF22C55E
+        draftIsFund = false
     }
 
     func startEdit(_ account: Account) {
@@ -46,6 +48,7 @@ final class ManageAccountsViewModel {
         draftType = account.type
         draftIcon = account.icon
         draftColor = account.color
+        draftIsFund = account.isFund
     }
 
     func save() {
@@ -56,7 +59,8 @@ final class ManageAccountsViewModel {
             name: trimmed,
             type: draftType,
             icon: draftIcon,
-            color: draftColor
+            color: draftColor,
+            isFund: draftIsFund
         )
         container.accountRepo.upsert(account)
     }
