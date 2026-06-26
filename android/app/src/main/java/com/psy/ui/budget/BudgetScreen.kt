@@ -53,6 +53,7 @@ import com.psy.domain.util.Money
 import com.psy.ui.components.BudgetProgress
 import com.psy.ui.components.EmptyState
 import com.psy.ui.components.EyebrowLabel
+import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.components.IconTile
 import com.psy.ui.components.MonthSelector
 import com.psy.ui.theme.LocalPsyColors
@@ -312,6 +313,7 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clearFocusOnTap()
                         .padding(horizontal = 22.dp)
                         .padding(bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),

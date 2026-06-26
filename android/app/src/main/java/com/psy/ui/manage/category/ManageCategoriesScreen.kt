@@ -49,6 +49,7 @@ import com.psy.ui.components.EmptyState
 import com.psy.ui.components.IconPicker
 import com.psy.ui.components.IconTile
 import com.psy.ui.components.SegmentedControl
+import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.icons.LucideIcon
 import com.psy.ui.theme.LocalPsyColors
 import com.psy.ui.theme.PsyTypography
@@ -420,6 +421,7 @@ private fun GroupEditor(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clearFocusOnTap()
             .padding(horizontal = 22.dp)
             .padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -482,6 +484,7 @@ private fun LeafEditor(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clearFocusOnTap()
             .padding(horizontal = 22.dp)
             .padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),

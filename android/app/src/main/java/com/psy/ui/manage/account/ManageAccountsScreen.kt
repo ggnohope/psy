@@ -48,6 +48,7 @@ import com.psy.domain.model.AccountType
 import com.psy.ui.components.ColorPicker
 import com.psy.ui.components.EmptyState
 import com.psy.ui.components.IconPicker
+import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.components.IconTile
 import com.psy.ui.theme.LocalPsyColors
 import com.psy.ui.theme.PlexMono
@@ -179,7 +180,7 @@ private fun AccountEditor(
 ) {
     val colors = LocalPsyColors.current
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 32.dp),
+        modifier = Modifier.fillMaxWidth().clearFocusOnTap().padding(horizontal = 16.dp).padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
