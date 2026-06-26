@@ -156,6 +156,23 @@ final class EngineTests: XCTestCase {
         XCTAssertTrue(AddEditLogic.canSave(amountText: "10", type: .transfer, categoryId: nil, accountId: 1, toAccountId: 2))
     }
 
+    func testBudgetExcludesFundAccounts() {
+        let normal = Account(id: 1, name: "Tiền mặt", type: .cash, icon: "wallet", color: 0)
+        let fund = Account(id: 2, name: "M2", type: .cash, icon: "wallet", color: 0, isFund: true)
+        let group = CategoryGroup(id: 10, name: "Ăn uống", icon: "utensils", color: 0, type: .expense, sortOrder: 0)
+        let leaf = Category(id: 100, groupId: 10, name: "Cà phê", icon: "coffee", sortOrder: 0)
+        let t = Int64(1_750_000_000_000)
+        let txNormal = Transaction(id: 1, ledgerId: 1, type: .expense, amountMinor: 7_000,
+                                   categoryId: 100, accountId: 1, note: "", date: t, createdAt: t, updatedAt: t)
+        let txFund = Transaction(id: 2, ledgerId: 1, type: .expense, amountMinor: 100_000,
+                                 categoryId: 100, accountId: 2, note: "", date: t, createdAt: t, updatedAt: t)
+        let totalBudget = Budget(id: 1, ledgerId: 1, groupId: nil, amountMinor: 1_000_000)
+
+        let r = BudgetEngine.build(monthTransactions: [txNormal, txFund], budgets: [totalBudget],
+                                   categories: [leaf], groups: [group], accounts: [normal, fund])
+        XCTAssertEqual(r.total?.spentMinor, 7_000) // fund tx excluded
+    }
+
     func testFundAccountExcludedFromSummaryButKeptInBreakdown() {
         let cal = Calendar(identifier: .gregorian)
         let now = Date(timeIntervalSince1970: 1_750_000_000)
