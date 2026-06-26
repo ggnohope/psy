@@ -7,6 +7,8 @@ import com.psy.domain.model.CategoryGroup
 import com.psy.domain.model.CategoryType
 import com.psy.domain.model.Currency
 import com.psy.domain.model.TxType
+import com.psy.domain.model.Account
+import com.psy.domain.repository.AccountRepository
 import com.psy.domain.repository.BudgetRepository
 import com.psy.domain.repository.CategoryGroupRepository
 import com.psy.domain.repository.CategoryRepository
@@ -50,6 +52,7 @@ private data class DomainData(
     val budgets: List<Budget>,
     val categories: List<com.psy.domain.model.Category>,
     val groups: List<CategoryGroup>,
+    val accounts: List<Account>,
 )
 
 // ---------------------------------------------------------------------------
@@ -107,6 +110,7 @@ class BudgetViewModel @Inject constructor(
     private val categoryRepo: CategoryRepository,
     private val groupRepo: CategoryGroupRepository,
     private val ledgerRepo: LedgerRepository,
+    private val accountRepo: AccountRepository,
 ) : ViewModel() {
 
     val selectedMonth: MutableStateFlow<YearMonth> = MutableStateFlow(YearMonth.now())
@@ -238,19 +242,23 @@ class BudgetViewModel @Inject constructor(
                 val categoriesFlow = categoryRepo.observeAll()
                 val groupsFlow = groupRepo.observeByType(CategoryType.EXPENSE)
 
-                // Combine domain data (4 flows) first, then zip with editor snapshot.
-                val domainFlow = combine(monthTxnsFlow, budgetsFlow, categoriesFlow, groupsFlow) {
-                    monthTxns, budgets, categories, groups ->
-                    DomainData(monthTxns, budgets, categories, groups)
+                // Combine domain data (5 flows) first, then zip with editor snapshot.
+                val domainFlow = combine(monthTxnsFlow, budgetsFlow, categoriesFlow, groupsFlow,
+                    accountRepo.observeAll()) {
+                    monthTxns, budgets, categories, groups, accounts ->
+                    DomainData(monthTxns, budgets, categories, groups, accounts)
                 }
 
-                combine(domainFlow, editorSnapshot) { (monthTxns, budgets, categories, groups), editor ->
+                combine(domainFlow, editorSnapshot) { (monthTxns, budgets, categories, groups, accounts), editor ->
                     val groupMap = groups.associateBy { it.id }
                     // leafId -> groupId so each EXPENSE tx can be attributed to its parent group.
                     val leafToGroup = categories.associate { it.id to it.groupId }
 
-                    // Spent = EXPENSE only; INCOME + TRANSFER are excluded.
-                    val expenseTxns = monthTxns.filter { it.type == TxType.EXPENSE }
+                    // Spent = EXPENSE only; INCOME + TRANSFER + fund-account txns excluded.
+                    val fundAccountIds = accounts.filter { it.isFund }.map { it.id }.toSet()
+                    val expenseTxns = monthTxns.filter {
+                        it.type == TxType.EXPENSE && it.accountId !in fundAccountIds
+                    }
                     val totalSpent = expenseTxns.sumOf { it.amountMinor }
 
                     // Total (uncategorised) budget
