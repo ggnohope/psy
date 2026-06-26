@@ -35,6 +35,7 @@ data class TxRow(
     /** Transaction time-of-day formatted as HH:mm. */
     val timeLabel: String = "",
     val accountName: String,
+    val isFund: Boolean = false,
     /** Destination account name for TRANSFER rows; null for INCOME/EXPENSE. */
     val toAccountName: String? = null,
     val type: TxType,
@@ -166,6 +167,7 @@ class HomeViewModel @Inject constructor(
                                 groupName = group?.name ?: "",
                                 timeLabel = timeLabel,
                                 accountName = acc?.name ?: "—",
+                                isFund = acc?.isFund == true,
                                 toAccountName = null,
                                 type = tx.type,
                                 amountMinor = tx.amountMinor,

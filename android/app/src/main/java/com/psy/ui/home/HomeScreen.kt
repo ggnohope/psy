@@ -153,6 +153,7 @@ fun HomeScreen(
                             }",
                             isIncome = isIncome,
                             account = row.accountName,
+                            isFund = row.isFund,
                             onClick = { onTxClick(row.id) },
                         )
                     }
