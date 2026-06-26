@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -110,6 +111,7 @@ fun ManageAccountsScreen(
                 onTypeChange = viewModel::onTypeChange,
                 onIconChange = viewModel::onIconChange,
                 onColorChange = viewModel::onColorChange,
+                onIsFundChange = viewModel::onIsFundChange,
                 onSave = viewModel::saveEditor,
                 onCancel = viewModel::closeEditor,
             )
@@ -171,6 +173,7 @@ private fun AccountEditor(
     onTypeChange: (AccountType) -> Unit,
     onIconChange: (String) -> Unit,
     onColorChange: (Long) -> Unit,
+    onIsFundChange: (Boolean) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -202,6 +205,20 @@ private fun AccountEditor(
         IconPicker(selected = state.draftIcon, onPick = onIconChange)
         Text(text = "Màu sắc", style = MaterialTheme.typography.labelLarge, color = colors.text2)
         ColorPicker(selected = state.draftColor, onPick = onColorChange)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Quỹ", color = colors.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(
+                    "Không tính vào thu/chi & ngân sách",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.text3,
+                )
+            }
+            Switch(checked = state.draftIsFund, onCheckedChange = onIsFundChange)
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Huỷ") }

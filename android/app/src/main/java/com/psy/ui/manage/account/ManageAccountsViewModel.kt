@@ -23,6 +23,7 @@ data class ManageAccountsUiState(
     val draftType: AccountType = AccountType.CASH,
     val draftIcon: String = "💵",
     val draftColor: Long = 0xFF22C55E,
+    val draftIsFund: Boolean = false,
 )
 
 @HiltViewModel
@@ -36,6 +37,7 @@ class ManageAccountsViewModel @Inject constructor(
     private val _draftType = MutableStateFlow(AccountType.CASH)
     private val _draftIcon = MutableStateFlow("💵")
     private val _draftColor = MutableStateFlow<Long>(0xFF22C55EL)
+    private val _draftIsFund = MutableStateFlow(false)
 
     private val _accounts = repo.observeAll()
 
@@ -47,6 +49,7 @@ class ManageAccountsViewModel @Inject constructor(
         _draftType,
         _draftIcon,
         _draftColor,
+        _draftIsFund,
     ) { values ->
         @Suppress("UNCHECKED_CAST")
         val accounts = values[0] as List<Account>
@@ -56,6 +59,7 @@ class ManageAccountsViewModel @Inject constructor(
         val draftType = values[4] as AccountType
         val draftIcon = values[5] as String
         val draftColor = values[6] as Long
+        val draftIsFund = values[7] as Boolean
         ManageAccountsUiState(
             accounts = accounts,
             editorOpen = editorOpen,
@@ -64,6 +68,7 @@ class ManageAccountsViewModel @Inject constructor(
             draftType = draftType,
             draftIcon = draftIcon,
             draftColor = draftColor,
+            draftIsFund = draftIsFund,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -79,6 +84,7 @@ class ManageAccountsViewModel @Inject constructor(
         _draftType.value = AccountType.CASH
         _draftIcon.value = "💵"
         _draftColor.value = 0xFF22C55EL
+        _draftIsFund.value = false
         _editorOpen.value = true
     }
 
@@ -88,6 +94,7 @@ class ManageAccountsViewModel @Inject constructor(
         _draftType.value = account.type
         _draftIcon.value = account.icon
         _draftColor.value = account.color
+        _draftIsFund.value = account.isFund
         _editorOpen.value = true
     }
 
@@ -107,6 +114,10 @@ class ManageAccountsViewModel @Inject constructor(
         _draftColor.value = color
     }
 
+    fun onIsFundChange(value: Boolean) {
+        _draftIsFund.value = value
+    }
+
     fun closeEditor() {
         _editorOpen.value = false
     }
@@ -118,6 +129,7 @@ class ManageAccountsViewModel @Inject constructor(
             type = _draftType.value,
             icon = _draftIcon.value,
             color = _draftColor.value,
+            isFund = _draftIsFund.value,
         )
         viewModelScope.launch {
             repo.upsert(account)
