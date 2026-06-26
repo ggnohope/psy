@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,10 +32,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,7 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composables.icons.lucide.Lock
 import com.composables.icons.lucide.Lucide
-import com.composables.icons.lucide.ShieldCheck
+import com.psy.R
 import com.psy.ui.app.AppViewModel
 import com.psy.ui.components.EyebrowLabel
 import com.psy.ui.theme.LocalPsyColors
@@ -106,24 +108,14 @@ fun LoginScreen(viewModel: AppViewModel) {
                         .clip(CircleShape)
                         .background(colors.teal.copy(alpha = glowAlpha)),
                 )
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(104.dp)
-                        .clip(RoundedCornerShape(26.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFF103458), Color(0xFF061A30)),
-                            ),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Lucide.ShieldCheck,
-                        contentDescription = null,
-                        tint = colors.teal,
-                        modifier = Modifier.size(52.dp),
-                    )
-                }
+                        .clip(RoundedCornerShape(26.dp)),
+                )
             }
 
             Spacer(Modifier.height(28.dp))
@@ -135,14 +127,6 @@ fun LoginScreen(viewModel: AppViewModel) {
                 fontWeight = FontWeight.Bold,
                 fontSize = 46.sp,
                 color = colors.text,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Ghi chép chi tiêu dễ thương",
-                fontFamily = PlexSans,
-                fontSize = 16.sp,
-                textAlign = TextAlign.Center,
-                color = colors.text2,
             )
 
             Spacer(Modifier.height(48.dp))

@@ -68,7 +68,7 @@ fun IconPicker(
         )
         LazyVerticalGrid(
             columns = GridCells.Fixed(6),
-            userScrollEnabled = false,
+            userScrollEnabled = true,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.fillMaxWidth().height((6 * 52).dp),

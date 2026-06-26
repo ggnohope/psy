@@ -26,13 +26,6 @@ struct LoginView: View {
                     .font(PsyFont.display(46))
                     .foregroundStyle(psyColors.text)
 
-                Spacer().frame(height: 8)
-
-                Text("Ghi chép chi tiêu dễ thương")
-                    .font(PsyFont.bodyLarge)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(psyColors.text2)
-
                 Spacer().frame(height: 48)
 
                 signInButton
@@ -69,16 +62,11 @@ struct LoginView: View {
                     value: pulse
                 )
 
-            RoundedRectangle(cornerRadius: 26)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(argb: 0xFF103458), Color(argb: 0xFF061A30)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            Image("app-logo")
+                .resizable()
+                .scaledToFill()
                 .frame(width: 104, height: 104)
-                .overlay(LucideIcon(name: "shield-check", size: 52, tint: psyColors.teal))
+                .clipShape(RoundedRectangle(cornerRadius: 26))
         }
     }
 
