@@ -11,11 +11,11 @@ extension LedgerEntity {
 
 extension AccountEntity {
     func toDomain() -> Account {
-        Account(id: id, name: name, type: AccountType(rawValue: type) ?? .cash, icon: icon, color: color)
+        Account(id: id, name: name, type: AccountType(rawValue: type) ?? .cash, icon: icon, color: color, isFund: isFund)
     }
-    func apply(_ d: Account) { name = d.name; type = d.type.rawValue; icon = d.icon; color = d.color }
+    func apply(_ d: Account) { name = d.name; type = d.type.rawValue; icon = d.icon; color = d.color; isFund = d.isFund }
     convenience init(from d: Account, id: Int64) {
-        self.init(id: id, name: d.name, type: d.type.rawValue, icon: d.icon, color: d.color)
+        self.init(id: id, name: d.name, type: d.type.rawValue, icon: d.icon, color: d.color, isFund: d.isFund)
     }
 }
 

@@ -17,7 +17,7 @@ final class SnapshotManager {
     func export() throws -> String {
         let snapshot = SnapshotDTO(
             ledgers: fetchAll(LedgerEntity.self).map { LedgerDTO(id: $0.id, name: $0.name, icon: $0.icon, currency: $0.currency, createdAt: $0.createdAt) },
-            accounts: fetchAll(AccountEntity.self).map { AccountDTO(id: $0.id, name: $0.name, type: $0.type, icon: $0.icon, color: $0.color) },
+            accounts: fetchAll(AccountEntity.self).map { AccountDTO(id: $0.id, name: $0.name, type: $0.type, icon: $0.icon, color: $0.color, isFund: $0.isFund) },
             categoryGroups: fetchAll(CategoryGroupEntity.self).map { CategoryGroupDTO(id: $0.id, name: $0.name, icon: $0.icon, color: $0.color, type: $0.type, sortOrder: $0.sortOrder) },
             categories: fetchAll(CategoryEntity.self).map { CategoryDTO(id: $0.id, groupId: $0.groupId, name: $0.name, icon: $0.icon, sortOrder: $0.sortOrder) },
             transactions: fetchAll(TransactionEntity.self).map { TransactionDTO(id: $0.id, ledgerId: $0.ledgerId, type: $0.type, amountMinor: $0.amountMinor, categoryId: $0.categoryId, accountId: $0.accountId, toAccountId: $0.toAccountId, note: $0.note, date: $0.date, createdAt: $0.createdAt, updatedAt: $0.updatedAt, photoUri: $0.photoUri) },
@@ -31,7 +31,7 @@ final class SnapshotManager {
         let dto = try JSONDecoder().decode(SnapshotDTO.self, from: Data(jsonStr.utf8))
         deleteAllRows()
         for l in dto.ledgers { context.insert(LedgerEntity(id: l.id, name: l.name, icon: l.icon, currency: l.currency, createdAt: l.createdAt)) }
-        for a in dto.accounts { context.insert(AccountEntity(id: a.id, name: a.name, type: a.type, icon: a.icon, color: a.color)) }
+        for a in dto.accounts { context.insert(AccountEntity(id: a.id, name: a.name, type: a.type, icon: a.icon, color: a.color, isFund: a.isFund)) }
         for g in dto.categoryGroups { context.insert(CategoryGroupEntity(id: g.id, name: g.name, icon: g.icon, color: g.color, type: g.type, sortOrder: g.sortOrder)) }
         for c in dto.categories { context.insert(CategoryEntity(id: c.id, groupId: c.groupId, name: c.name, icon: c.icon, sortOrder: c.sortOrder)) }
         for t in dto.transactions { context.insert(TransactionEntity(id: t.id, ledgerId: t.ledgerId, type: t.type, amountMinor: t.amountMinor, categoryId: t.categoryId, accountId: t.accountId, toAccountId: t.toAccountId, note: t.note, date: t.date, createdAt: t.createdAt, updatedAt: t.updatedAt, photoUri: t.photoUri)) }
