@@ -46,8 +46,9 @@ final class SnapshotDTOTests: XCTestCase {
                                           accountId: 1, toAccountId: nil, note: "", date: 1, createdAt: 1, updatedAt: 1, photoUri: nil)],
             budgets: [BudgetDTO(id: 1, ledgerId: 1, groupId: 5, amountMinor: 1000)]
         )
-        XCTAssertEqual(dto.version, 2)
+        XCTAssertEqual(dto.version, 3) // isFund migration bumped the default snapshot version
         let json = String(decoding: try JSONEncoder().encode(dto), as: UTF8.self)
+        XCTAssertTrue(json.contains("\"isFund\":false"), "account must carry isFund")
         XCTAssertTrue(json.contains("\"categoryGroups\""), "snapshot must carry categoryGroups")
         XCTAssertTrue(json.contains("\"groupId\":1"), "category must carry groupId")
         XCTAssertTrue(json.contains("\"groupId\":5"), "budget must carry groupId")
