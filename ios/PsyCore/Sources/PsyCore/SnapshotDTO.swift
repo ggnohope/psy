@@ -11,7 +11,7 @@ public struct SnapshotDTO: Codable, Equatable, Sendable {
     public var transactions: [TransactionDTO]
     public var budgets: [BudgetDTO]
 
-    public init(version: Int = 2, ledgers: [LedgerDTO], accounts: [AccountDTO],
+    public init(version: Int = 3, ledgers: [LedgerDTO], accounts: [AccountDTO],
                 categoryGroups: [CategoryGroupDTO] = [], categories: [CategoryDTO],
                 transactions: [TransactionDTO], budgets: [BudgetDTO]) {
         self.version = version; self.ledgers = ledgers; self.accounts = accounts
@@ -53,8 +53,22 @@ public struct AccountDTO: Codable, Equatable, Sendable {
     public var type: String
     public var icon: String
     public var color: Int64
-    public init(id: Int64, name: String, type: String, icon: String, color: Int64) {
-        self.id = id; self.name = name; self.type = type; self.icon = icon; self.color = color
+    public var isFund: Bool
+    public init(id: Int64, name: String, type: String, icon: String, color: Int64, isFund: Bool = false) {
+        self.id = id; self.name = name; self.type = type; self.icon = icon; self.color = color; self.isFund = isFund
+    }
+
+    enum CodingKeys: String, CodingKey { case id, name, type, icon, color, isFund }
+
+    // isFund defaults to false when decoding a v2 blob that lacks the key.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int64.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        type = try c.decode(String.self, forKey: .type)
+        icon = try c.decode(String.self, forKey: .icon)
+        color = try c.decode(Int64.self, forKey: .color)
+        isFund = try c.decodeIfPresent(Bool.self, forKey: .isFund) ?? false
     }
 }
 
