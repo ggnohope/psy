@@ -10,4 +10,5 @@ data class AccountEntity(
     val type: String,   // AccountType.name
     val icon: String,
     val color: Long,
+    val isFund: Boolean = false,
 )

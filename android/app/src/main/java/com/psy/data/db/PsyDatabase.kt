@@ -17,7 +17,7 @@ import com.psy.data.db.entity.TransactionEntity
 
 @Database(
     entities = [LedgerEntity::class, AccountEntity::class, CategoryGroupEntity::class, CategoryEntity::class, TransactionEntity::class, BudgetEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class PsyDatabase : RoomDatabase() {
