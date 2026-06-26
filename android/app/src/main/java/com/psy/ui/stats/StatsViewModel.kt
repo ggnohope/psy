@@ -73,6 +73,7 @@ data class AccountStat(
     val incomeMinor: Long,
     val expenseMinor: Long,
     val netMinor: Long,
+    val isFund: Boolean = false,
 )
 
 data class StatsUiState(
@@ -186,6 +187,7 @@ class StatsViewModel @Inject constructor(
                                 incomeMinor = sums[0],
                                 expenseMinor = sums[1],
                                 netMinor = sums[0] - sums[1],
+                                isFund = acc.isFund,
                             )
                         }
                         .sortedByDescending { it.incomeMinor + it.expenseMinor }
@@ -193,9 +195,11 @@ class StatsViewModel @Inject constructor(
                     // Drop the filter if the selected account no longer exists.
                     val effectiveFilter = currentAccountFilter?.takeIf { accountMap.containsKey(it) }
 
-                    // Apply account filter to the whole window; summary/pie/trend/top derive from it.
+                    // Fund accounts: excluded from the "Tất cả" view; an explicit account
+                    // filter (even a fund) still shows that account's real numbers.
+                    val fundAccountIds = accounts.filter { it.isFund }.map { it.id }.toSet()
                     val filteredWindow =
-                        if (effectiveFilter == null) windowTxns
+                        if (effectiveFilter == null) windowTxns.filter { it.accountId !in fundAccountIds }
                         else windowTxns.filter { it.accountId == effectiveFilter }
 
                     // Separate month txns from the (filtered) window
