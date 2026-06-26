@@ -8,6 +8,8 @@ struct StatsView: View {
     let container: AppContainer
     @Environment(\.psyColors) private var psyColors
     @State private var vm: StatsViewModel
+    /// Group ids currently expanded to reveal their sub-category (leaf) breakdown. Mirrors Android.
+    @State private var expandedGroups: Set<Int64> = []
 
     init(container: AppContainer) {
         self.container = container
@@ -258,12 +260,14 @@ struct StatsView: View {
     }
 
     private func topEntryRow(_ entry: TopGroup) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let isExpanded = expandedGroups.contains(entry.groupId)
+        let groupColor = Color(argb: entry.color)
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(argb: entry.color).opacity(0.14))
+                    .fill(groupColor.opacity(0.14))
                     .frame(width: 28, height: 28)
-                    .overlay(LucideIcon(name: entry.icon, size: 16, tint: Color(argb: entry.color)))
+                    .overlay(LucideIcon(name: entry.icon, size: 16, tint: groupColor))
                 Text(entry.name)
                     .font(PsyFont.bodyLarge.weight(.semibold))
                     .foregroundStyle(psyColors.text)
@@ -271,16 +275,56 @@ struct StatsView: View {
                 Text(vm.currency.format(entry.amountMinor))
                     .font(PsyFont.display(15))
                     .foregroundStyle(psyColors.text)
-                Text("\(Int(entry.percentOfTotal * 100))%")
+                Text("\(Int(entry.percentOfTotal * 100))% · \(entry.count)")
                     .font(PsyFont.mono(11))
                     .foregroundStyle(psyColors.text3)
+                if !entry.children.isEmpty {
+                    LucideIcon(name: "chevron-right", size: 16, tint: psyColors.text3)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
             }
-            barLine(fraction: entry.percentOfTotal, color: Color(argb: entry.color), height: 8)
+            barLine(fraction: entry.percentOfTotal, color: groupColor, height: 8)
+
+            if isExpanded {
+                VStack(spacing: 8) {
+                    ForEach(entry.children) { leaf in
+                        topLeafRow(leaf, barColor: groupColor.opacity(0.45))
+                    }
+                }
+                .padding(.leading, 20)
+                .padding(.top, 2)
+            }
         }
         .padding(14)
         .background(psyColors.surface)
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(psyColors.hair, lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !entry.children.isEmpty else { return }
+            withAnimation(.easeInOut(duration: 0.18)) {
+                if isExpanded { expandedGroups.remove(entry.groupId) }
+                else { expandedGroups.insert(entry.groupId) }
+            }
+        }
+    }
+
+    private func topLeafRow(_ leaf: TopLeaf, barColor: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(leaf.name)
+                    .font(PsyFont.bodyMedium)
+                    .foregroundStyle(psyColors.text2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(vm.currency.format(leaf.amountMinor))
+                    .font(PsyFont.display(13))
+                    .foregroundStyle(psyColors.text)
+                Text("\(Int(leaf.percentInGroup * 100))%")
+                    .font(PsyFont.mono(11))
+                    .foregroundStyle(psyColors.text3)
+            }
+            barLine(fraction: leaf.percentInGroup, color: barColor, height: 6)
+        }
     }
 
     // MARK: - Trend
