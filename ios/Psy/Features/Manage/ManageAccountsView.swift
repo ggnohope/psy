@@ -128,16 +128,6 @@ private struct AccountEditorSheet: View {
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
-                        EyebrowLabel(text: "Biểu tượng")
-                        IconPicker(selected: vm.draftIcon) { vm.draftIcon = $0 }
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        EyebrowLabel(text: "Màu sắc")
-                        ColorPicker(selected: vm.draftColor) { vm.draftColor = $0 }
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
                         Toggle(isOn: $vm.draftIsFund) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Quỹ")
@@ -149,6 +139,16 @@ private struct AccountEditorSheet: View {
                             }
                         }
                         .tint(psyColors.blue)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        EyebrowLabel(text: "Biểu tượng")
+                        IconPicker(selected: vm.draftIcon) { vm.draftIcon = $0 }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        EyebrowLabel(text: "Màu sắc")
+                        ColorPicker(selected: vm.draftColor) { vm.draftColor = $0 }
                     }
                 }
                 .padding(22)

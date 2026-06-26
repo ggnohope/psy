@@ -201,10 +201,6 @@ private fun AccountEditor(
                 )
             }
         }
-        Text(text = "Biểu tượng", style = MaterialTheme.typography.labelLarge, color = colors.text2)
-        IconPicker(selected = state.draftIcon, onPick = onIconChange)
-        Text(text = "Màu sắc", style = MaterialTheme.typography.labelLarge, color = colors.text2)
-        ColorPicker(selected = state.draftColor, onPick = onColorChange)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
@@ -219,6 +215,10 @@ private fun AccountEditor(
             }
             Switch(checked = state.draftIsFund, onCheckedChange = onIsFundChange)
         }
+        Text(text = "Biểu tượng", style = MaterialTheme.typography.labelLarge, color = colors.text2)
+        IconPicker(selected = state.draftIcon, onPick = onIconChange)
+        Text(text = "Màu sắc", style = MaterialTheme.typography.labelLarge, color = colors.text2)
+        ColorPicker(selected = state.draftColor, onPick = onColorChange)
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Huỷ") }
