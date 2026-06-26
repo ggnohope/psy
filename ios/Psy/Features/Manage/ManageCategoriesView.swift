@@ -144,18 +144,36 @@ struct ManageCategoriesView: View {
                         EyebrowLabel(text: "Màu sắc")
                         ColorPicker(selected: color.wrappedValue) { color.wrappedValue = $0 }
                     }
+
+                    HStack(spacing: 12) {
+                        Button { onCancel() } label: {
+                            Text("Huỷ")
+                                .font(PsyFont.bodyLarge)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                                .foregroundStyle(psyColors.text2)
+                                .background(psyColors.surface)
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(psyColors.hair, lineWidth: 1))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        Button { onSave() } label: {
+                            Text("Lưu")
+                                .font(PsyFont.bodyLarge.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                                .foregroundStyle(.white)
+                                .background(canSave ? psyColors.blue : psyColors.text3)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .disabled(!canSave)
+                    }
+                    .padding(.top, 4)
                 }
                 .padding(16)
             }
             .background(psyColors.bg)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Huỷ", action: onCancel) }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Lưu", action: onSave).disabled(!canSave)
-                }
-            }
         }
     }
 }

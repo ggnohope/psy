@@ -150,25 +150,41 @@ private struct AccountEditorSheet: View {
                         EyebrowLabel(text: "Màu sắc")
                         ColorPicker(selected: vm.draftColor) { vm.draftColor = $0 }
                     }
+
+                    HStack(spacing: 12) {
+                        Button { onDone() } label: {
+                            Text("Huỷ")
+                                .font(PsyFont.bodyLarge)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                                .foregroundStyle(psyColors.text2)
+                                .background(psyColors.surface)
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(psyColors.hair, lineWidth: 1))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        Button { vm.save(); onDone() } label: {
+                            Text("Lưu")
+                                .font(PsyFont.bodyLarge.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                                .foregroundStyle(.white)
+                                .background(saveDisabled ? psyColors.text3 : psyColors.blue)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .disabled(saveDisabled)
+                    }
+                    .padding(.top, 4)
                 }
                 .padding(22)
             }
             .background(psyColors.bg.ignoresSafeArea())
             .navigationTitle(vm.editingId == nil ? "Thêm tài khoản" : "Sửa tài khoản")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Huỷ") { onDone() }
-                        .foregroundStyle(psyColors.text2)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Lưu") { vm.save(); onDone() }
-                        .fontWeight(.semibold)
-                        .foregroundStyle(psyColors.blue)
-                        .disabled(vm.draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
         }
+    }
+
+    private var saveDisabled: Bool {
+        vm.draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func typeChip(_ type: AccountType) -> some View {
