@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class SnapshotDto(
-    val version: Int = 2,
+    val version: Int = 3,
     val ledgers: List<LedgerDto>,
     val accounts: List<AccountDto>,
     val categoryGroups: List<CategoryGroupDto> = emptyList(),
@@ -39,6 +39,7 @@ data class AccountDto(
     val type: String,
     val icon: String,
     val color: Long,
+    val isFund: Boolean = false,
 )
 
 @Serializable
@@ -89,8 +90,8 @@ data class BudgetDto(
 fun LedgerEntity.toDto() = LedgerDto(id, name, icon, currency, createdAt)
 fun LedgerDto.toEntity() = LedgerEntity(id, name, icon, currency, createdAt)
 
-fun AccountEntity.toDto() = AccountDto(id, name, type, icon, color)
-fun AccountDto.toEntity() = AccountEntity(id, name, type, icon, color)
+fun AccountEntity.toDto() = AccountDto(id, name, type, icon, color, isFund)
+fun AccountDto.toEntity() = AccountEntity(id, name, type, icon, color, isFund)
 
 fun CategoryGroupEntity.toDto() = CategoryGroupDto(id, name, icon, color, type, sortOrder)
 fun CategoryGroupDto.toEntity() = CategoryGroupEntity(id, name, icon, color, type, sortOrder)
