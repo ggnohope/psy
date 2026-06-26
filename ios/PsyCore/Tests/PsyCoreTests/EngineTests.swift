@@ -95,7 +95,7 @@ final class EngineTests: XCTestCase {
         ]
         let budgets = [Budget(id: 1, ledgerId: 1, groupId: nil, amountMinor: 1000)]
         let r = BudgetEngine.build(monthTransactions: txns, budgets: budgets,
-                                   categories: [cat(20, "Ăn", group: 200)], groups: [grp(200, "Ăn uống", .expense)])
+                                   categories: [cat(20, "Ăn", group: 200)], groups: [grp(200, "Ăn uống", .expense)], accounts: [])
         XCTAssertEqual(r.total?.spentMinor, 700)   // income + transfer excluded
         XCTAssertEqual(r.total?.percent ?? 0, 0.7, accuracy: 0.0001)
     }
@@ -110,7 +110,7 @@ final class EngineTests: XCTestCase {
         let cats = [cat(20, "Phở", group: 200), cat(21, "Cơm", group: 200), cat(30, "Xăng", group: 300)]
         let groups = [grp(200, "Ăn uống", .expense), grp(300, "Di chuyển", .expense)]
         let budgets = [Budget(id: 5, ledgerId: 1, groupId: 200, amountMinor: 1000)]
-        let r = BudgetEngine.build(monthTransactions: txns, budgets: budgets, categories: cats, groups: groups)
+        let r = BudgetEngine.build(monthTransactions: txns, budgets: budgets, categories: cats, groups: groups, accounts: [])
         let item = r.categoryBudgets.first { $0.budget.groupId == 200 }
         XCTAssertEqual(item?.spentMinor, 500)               // 300 + 200, group 300 excluded
         XCTAssertEqual(item?.group?.name, "Ăn uống")
