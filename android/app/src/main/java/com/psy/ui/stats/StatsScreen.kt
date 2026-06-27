@@ -311,12 +311,11 @@ private fun AccountBreakdownSection(
                 Text("Chi", fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
             }
         }
-        state.accountBreakdown.forEachIndexed { index, stat ->
+        state.accountBreakdown.forEach { stat ->
             AccountBreakdownRow(
                 stat = stat,
                 maxValue = maxValue,
                 currency = state.currency,
-                iconTint = if (index % 2 == 0) colors.blue else colors.green,
                 onClick = { onSelect(stat.id) },
             )
         }
@@ -328,10 +327,10 @@ private fun AccountBreakdownRow(
     stat: AccountStat,
     maxValue: Long,
     currency: Currency,
-    iconTint: Color,
     onClick: () -> Unit,
 ) {
     val colors = LocalPsyColors.current
+    val iconTint = Color(stat.color)
     Row(
         modifier = Modifier
             .fillMaxWidth()
