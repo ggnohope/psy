@@ -19,10 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,10 +28,10 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -361,23 +359,30 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                     Button(
                         onClick = viewModel::saveEditor,
                         enabled = state.canSave,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.blue),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("Lưu")
                     }
 
                     if (state.isEditing) {
-                        TextButton(
+                        OutlinedButton(
                             onClick = viewModel::removeEditor,
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, colors.red),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.red),
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.textButtonColors(contentColor = colors.red),
                         ) {
                             Text("Xoá ngân sách này")
                         }
                     }
 
-                    TextButton(
+                    OutlinedButton(
                         onClick = viewModel::closeEditor,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, colors.hair),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.text2),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("Huỷ")
