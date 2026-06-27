@@ -34,9 +34,11 @@ struct ManageAccountsView: View {
                 vm.startAdd()
                 editorOpen = true
             } label: {
-                LucideIcon(name: "plus", size: 24, tint: .white)
+                LucideIcon(name: "plus", size: 26, tint: .white)
                     .frame(width: 56, height: 56)
-                    .background(Circle().fill(psyColors.blue))
+                    .background(psyColors.blue)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: psyColors.blue.opacity(0.3), radius: 12, y: 6)
             }
             .padding(22)
         }
@@ -108,14 +110,7 @@ private struct AccountEditorSheet: View {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 8) {
                         EyebrowLabel(text: "Tên tài khoản")
-                        TextField("Tên tài khoản", text: $vm.draftName)
-                            .font(PsyFont.bodyLarge)
-                            .foregroundStyle(psyColors.text)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
-                            .background(psyColors.surface)
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(psyColors.hair, lineWidth: 1))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        PsyTextField("Tên tài khoản", text: $vm.draftName)
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -159,8 +154,8 @@ private struct AccountEditorSheet: View {
                                 .padding(.vertical, 13)
                                 .foregroundStyle(psyColors.text2)
                                 .background(psyColors.surface)
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(psyColors.hair, lineWidth: 1))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: PsyRadius.button).stroke(psyColors.hair, lineWidth: 1))
+                                .clipShape(RoundedRectangle(cornerRadius: PsyRadius.button))
                         }
                         Button { vm.save(); onDone() } label: {
                             Text("Lưu")
@@ -168,8 +163,8 @@ private struct AccountEditorSheet: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 13)
                                 .foregroundStyle(.white)
-                                .background(saveDisabled ? psyColors.text3 : psyColors.blue)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .background(psyColors.blue.opacity(saveDisabled ? 0.4 : 1))
+                                .clipShape(RoundedRectangle(cornerRadius: PsyRadius.button))
                         }
                         .disabled(saveDisabled)
                     }

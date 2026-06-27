@@ -1,5 +1,6 @@
 package com.psy.ui.manage.account
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,6 +9,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,18 +20,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -50,6 +52,7 @@ import com.psy.domain.model.AccountType
 import com.psy.ui.components.ColorPicker
 import com.psy.ui.components.EmptyState
 import com.psy.ui.components.IconPicker
+import com.psy.ui.components.PsyTextField
 import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.components.IconTile
 import com.psy.ui.theme.LocalPsyColors
@@ -168,7 +171,7 @@ private fun AccountRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun AccountEditor(
     state: ManageAccountsUiState,
@@ -190,18 +193,22 @@ private fun AccountEditor(
             text = if (state.editingId == null) "Thêm tài khoản" else "Sửa tài khoản",
             fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = colors.text,
         )
-        OutlinedTextField(
-            value = state.draftName, onValueChange = onNameChange,
-            label = { Text("Tên tài khoản") }, singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+        PsyTextField(
+            value = state.draftName,
+            onValueChange = onNameChange,
+            label = "Tên tài khoản",
         )
         Text(text = "Loại tài khoản", style = MaterialTheme.typography.labelLarge, color = colors.text2)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             AccountType.entries.forEach { type ->
-                FilterChip(
+                TypeChip(
+                    type = type,
                     selected = state.draftType == type,
                     onClick = { onTypeChange(type) },
-                    label = { Text(type.toVietnamese()) },
                 )
             }
         }
@@ -225,13 +232,40 @@ private fun AccountEditor(
         ColorPicker(selected = state.draftColor, onPick = onColorChange)
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Huỷ") }
+            OutlinedButton(
+                onClick = onCancel,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, colors.hair),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.text2),
+                modifier = Modifier.weight(1f),
+            ) { Text("Huỷ") }
             Button(
                 onClick = onSave,
                 enabled = state.draftName.isNotBlank(),
+                shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = colors.blue),
                 modifier = Modifier.weight(1f),
             ) { Text("Lưu") }
         }
     }
+}
+
+@Composable
+private fun TypeChip(
+    type: AccountType,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = LocalPsyColors.current
+    Text(
+        text = type.toVietnamese(),
+        color = if (selected) Color.White else colors.text2,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        fontSize = 14.sp,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(if (selected) colors.blue else colors.sunken)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+    )
 }

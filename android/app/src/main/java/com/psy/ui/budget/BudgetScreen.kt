@@ -30,7 +30,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
@@ -55,6 +54,7 @@ import com.psy.domain.util.Money
 import com.psy.ui.components.BudgetProgress
 import com.psy.ui.components.EmptyState
 import com.psy.ui.components.EyebrowLabel
+import com.psy.ui.components.PsyTextField
 import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.components.IconTile
 import com.psy.ui.components.MonthSelector
@@ -351,13 +351,11 @@ fun BudgetScreen(viewModel: BudgetViewModel = hiltViewModel()) {
                         }
                     }
 
-                    OutlinedTextField(
+                    PsyTextField(
                         value = state.draftAmountText,
                         onValueChange = viewModel::onAmountChange,
-                        label = { Text("Số tiền (${state.currency.symbol})") },
+                        label = "Số tiền (${state.currency.symbol})",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
                     )
 
                     Button(

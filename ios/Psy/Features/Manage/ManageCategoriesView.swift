@@ -137,7 +137,8 @@ struct ManageCategoriesView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    TextField("Tên", text: name).textFieldStyle(.roundedBorder)
+                    EyebrowLabel(text: "Tên")
+                    PsyTextField("Tên", text: name)
                     EyebrowLabel(text: "Biểu tượng")
                     IconPicker(selected: icon.wrappedValue) { icon.wrappedValue = $0 }
                     if showColor {
@@ -153,8 +154,8 @@ struct ManageCategoriesView: View {
                                 .padding(.vertical, 13)
                                 .foregroundStyle(psyColors.text2)
                                 .background(psyColors.surface)
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(psyColors.hair, lineWidth: 1))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: PsyRadius.button).stroke(psyColors.hair, lineWidth: 1))
+                                .clipShape(RoundedRectangle(cornerRadius: PsyRadius.button))
                         }
                         Button { onSave() } label: {
                             Text("Lưu")
@@ -162,8 +163,8 @@ struct ManageCategoriesView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 13)
                                 .foregroundStyle(.white)
-                                .background(canSave ? psyColors.blue : psyColors.text3)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .background(psyColors.blue.opacity(canSave ? 1 : 0.4))
+                                .clipShape(RoundedRectangle(cornerRadius: PsyRadius.button))
                         }
                         .disabled(!canSave)
                     }
