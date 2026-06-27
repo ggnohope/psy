@@ -20,14 +20,29 @@ final class AppViewModel {
     private var lastBackgroundedAt: Int64 = 0
     private let skipAuth = ProcessInfo.processInfo.environment["PSY_SKIP_AUTH"] == "1"
 
+    // Auto-backup gate: set to the token for which restore-or-seed has SUCCEEDED this
+    // session. `backupNow` only runs when this matches the current token, so a freshly
+    // wiped/empty local state can never overwrite the cloud backup before it is restored.
+    private var preparedToken: String?
+    private var isPreparing = false
+
     init(container: AppContainer) {
         self.container = container
         if skipAuth { isSignedIn = true }
         else {
             container.tokenStore.tokenSubject
-                .map { $0 != nil }
                 .receive(on: RunLoop.main)
-                .sink { [weak self] v in self?.isSignedIn = v }
+                .sink { [weak self] token in
+                    guard let self else { return }
+                    self.isSignedIn = (token != nil)
+                    if let token {
+                        // Cold launch with an existing Keychain token also lands here (not just
+                        // explicit sign-in): restore-if-empty BEFORE any auto-backup can fire.
+                        Task { await self.prepareLocalData(for: token) }
+                    } else {
+                        self.preparedToken = nil
+                    }
+                }
                 .store(in: &cancellables)
         }
         if container.settingsStore.lockEnabled { isLocked = true }
@@ -44,12 +59,26 @@ final class AppViewModel {
                 switch result {
                 case .success:
                     message = nil
-                    await container.backupRepo.prepareLocalDataAfterLogin()
+                    if let token = container.tokenStore.currentToken {
+                        await prepareLocalData(for: token)
+                    }
                 case .failure(let e):
                     message = "Lỗi đăng nhập: \(e.localizedDescription)"
                 }
             } catch { message = "Lỗi đăng nhập Google: \(error.localizedDescription)" }
             signingIn = false
+        }
+    }
+
+    /// Restore-or-seed local data for the given token, then open the auto-backup gate
+    /// (`preparedToken`) only if it succeeded. Idempotent + single-flight per token, so the
+    /// cold-launch path and the explicit sign-in path can both call it without double work.
+    private func prepareLocalData(for token: String) async {
+        guard preparedToken != token, !isPreparing else { return }
+        isPreparing = true
+        defer { isPreparing = false }
+        if await container.backupRepo.prepareLocalDataAfterLogin() {
+            preparedToken = token
         }
     }
 
@@ -69,7 +98,10 @@ final class AppViewModel {
         let now = Int64(Date().timeIntervalSince1970 * 1000)
         didEnterBackground = true
         lastBackgroundedAt = now
-        guard container.tokenStore.currentToken != nil else { return }
+        guard let token = container.tokenStore.currentToken else { return }
+        // Never auto-backup until restore-or-seed has succeeded this session, else an empty/
+        // freshly-wiped local state would overwrite the good cloud backup.
+        guard preparedToken == token else { return }
         let last = container.tokenStore.lastSyncAt ?? 0
         if now - last > autoBackupThrottleMs {
             Task { _ = await container.backupRepo.backupNow() }
@@ -78,7 +110,10 @@ final class AppViewModel {
 
     func logout() {
         Task {
-            _ = await container.backupRepo.backupNow()
+            // Only push a final backup if local data is in a known-good (prepared) state.
+            if preparedToken == container.tokenStore.currentToken {
+                _ = await container.backupRepo.backupNow()
+            }
             container.backupRepo.wipeLocal()
             container.authRepo.signOut()
         }
