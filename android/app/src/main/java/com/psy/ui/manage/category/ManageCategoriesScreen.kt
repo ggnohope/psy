@@ -307,7 +307,7 @@ private fun GroupCard(
                 fontWeight = FontWeight.SemiBold,
                 color = colors.text,
             )
-            IconButton(onClick = onEditGroup, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onEditGroup, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Lucide.Pencil,
                     contentDescription = "Sửa nhóm",
@@ -315,7 +315,7 @@ private fun GroupCard(
                     modifier = Modifier.size(18.dp),
                 )
             }
-            IconButton(onClick = onDeleteGroup, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onDeleteGroup, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Lucide.Trash2,
                     contentDescription = "Xoá nhóm",
@@ -394,20 +394,20 @@ private fun LeafRow(
             style = PsyTypography.bodyMedium,
             color = colors.text,
         )
-        IconButton(onClick = onEdit, modifier = Modifier.size(34.dp)) {
+        IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
             Icon(
                 Lucide.Pencil,
                 contentDescription = "Sửa mục",
                 tint = colors.text3,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
-        IconButton(onClick = onDelete, modifier = Modifier.size(34.dp)) {
+        IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
             Icon(
                 Lucide.Trash2,
                 contentDescription = "Xoá mục",
                 tint = colors.red,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
     }

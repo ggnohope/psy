@@ -294,7 +294,7 @@ private fun AccountBreakdownSection(
         .maxOf { maxOf(it.incomeMinor, it.expenseMinor) }
         .coerceAtLeast(1L)
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -340,7 +340,7 @@ private fun AccountBreakdownRow(
             .clickable(onClick = onClick)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(13.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         IconTile(
             iconName = stat.icon,
@@ -357,7 +357,7 @@ private fun AccountBreakdownRow(
                 Text(
                     text = stat.name,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
+                    fontSize = 16.sp,
                     color = colors.text,
                     maxLines = 1,
                     modifier = Modifier.weight(1f),

@@ -94,7 +94,7 @@ struct TransactionRowView: View {
     @Environment(\.psyColors) private var psyColors
 
     var body: some View {
-        HStack(spacing: 13) {
+        HStack(spacing: 12) {
             IconTile(iconName: iconName, tint: iconTint, bg: iconBg, size: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text(name).font(PsyFont.bodyLarge.weight(.semibold)).foregroundStyle(psyColors.text)

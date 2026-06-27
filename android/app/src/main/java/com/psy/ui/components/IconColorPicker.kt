@@ -92,6 +92,7 @@ fun ColorPicker(
     onPick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalPsyColors.current
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -99,25 +100,34 @@ fun ColorPicker(
     ) {
         COLOR_PALETTE.forEach { colorValue ->
             val isSelected = colorValue == selected
+            // 48.dp tappable box keeps the 36.dp swatch visual centered (a11y hit target).
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
-                    .background(Color(colorValue))
-                    .then(
-                        if (isSelected) Modifier.border(3.dp, Color.White, CircleShape)
-                        else Modifier,
-                    )
                     .clickable { onPick(colorValue) },
             ) {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp),
-                    )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(colorValue))
+                        .border(
+                            width = if (isSelected) 3.dp else 1.dp,
+                            color = if (isSelected) Color.White else colors.hair,
+                            shape = CircleShape,
+                        ),
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         }

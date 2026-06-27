@@ -72,7 +72,7 @@ private struct AccountRow: View {
     let account: Account
 
     var body: some View {
-        HStack(spacing: 13) {
+        HStack(spacing: 12) {
             IconTile(
                 iconName: account.icon,
                 tint: Color(argb: account.color),
@@ -83,7 +83,7 @@ private struct AccountRow: View {
                 Text(account.name)
                     .font(PsyFont.bodyLarge.weight(.semibold))
                     .foregroundStyle(psyColors.text)
-                Text(account.type.rawValue)
+                Text(account.type.vietnamese)
                     .font(PsyFont.mono(11))
                     .tracking(1.2)
                     .foregroundStyle(psyColors.text3)

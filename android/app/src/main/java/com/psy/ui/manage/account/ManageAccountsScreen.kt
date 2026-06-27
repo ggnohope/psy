@@ -91,7 +91,7 @@ fun ManageAccountsScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 4.dp, bottom = 96.dp),
                 ) {
                     items(state.accounts, key = { it.id }) { account ->
@@ -133,13 +133,6 @@ private fun AccountType.toVietnamese(): String = when (this) {
     AccountType.ASSET -> "Tài sản"
 }
 
-private fun AccountType.code(): String = when (this) {
-    AccountType.CASH -> "CASH"
-    AccountType.BANK -> "BANK"
-    AccountType.CREDIT -> "CREDIT"
-    AccountType.ASSET -> "ASSET"
-}
-
 @Composable
 private fun AccountRow(
     account: Account,
@@ -165,8 +158,8 @@ private fun AccountRow(
             size = 48.dp,
         )
         Column(Modifier.weight(1f)) {
-            Text(account.name, color = colors.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            Text(account.type.code(), fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
+            Text(account.name, color = colors.text, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text(account.type.toVietnamese(), fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
         }
         Icon(Lucide.ChevronRight, null, tint = colors.text3, modifier = Modifier.size(20.dp))
     }
@@ -187,7 +180,7 @@ private fun AccountEditor(
     val colors = LocalPsyColors.current
     Column(
         modifier = Modifier.fillMaxWidth().clearFocusOnTap().verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp).padding(bottom = 32.dp),
+            .padding(horizontal = 22.dp).padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(

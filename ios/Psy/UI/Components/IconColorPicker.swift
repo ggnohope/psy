@@ -46,6 +46,7 @@ struct IconPicker: View {
 
 /// Wrapping row of color swatches; selected swatch highlighted with a white ring + check.
 struct ColorPicker: View {
+    @Environment(\.psyColors) private var psyColors
     let selected: Int64
     let onPick: (Int64) -> Void
 
@@ -57,8 +58,13 @@ struct ColorPicker: View {
                     Circle()
                         .fill(Color(argb: value))
                         .frame(width: 36, height: 36)
+                        // Selected: 3pt white ring. Unselected: 1pt hairline so dark
+                        // palette colors stay visible against the dark surface.
                         .overlay(
-                            Circle().stroke(Color.white, lineWidth: isSelected ? 3 : 0)
+                            Circle().stroke(
+                                isSelected ? Color.white : psyColors.hair,
+                                lineWidth: isSelected ? 3 : 1
+                            )
                         )
                     if isSelected {
                         Image(systemName: "checkmark")
@@ -66,6 +72,8 @@ struct ColorPicker: View {
                             .foregroundStyle(.white)
                     }
                 }
+                // 44pt tappable area (a11y), 36pt visual unchanged.
+                .frame(width: 44, height: 44)
                 .contentShape(Circle())
                 .onTapGesture { onPick(value) }
             }
