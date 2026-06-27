@@ -168,10 +168,10 @@ struct StatsView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         if stat.isFund {
                             Text("Quỹ")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(psyColors.text3)
-                                .padding(.horizontal, 6).padding(.vertical, 1)
-                                .background(psyColors.text3.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(psyColors.blue)
+                                .padding(.horizontal, 7).padding(.vertical, 2)
+                                .background(psyColors.blueSoft, in: Capsule())
                         }
                         Text(vm.currency.format(stat.netMinor))
                             .font(PsyFont.display(15))

@@ -89,14 +89,14 @@ fun TransactionRow(
             if (isFund) {
                 Text(
                     "Quỹ",
-                    color = colors.text3,
-                    fontSize = 10.sp,
+                    color = colors.blue,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .padding(top = 2.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(colors.text3.copy(alpha = 0.12f))
-                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(colors.blueSoft)
+                        .padding(horizontal = 7.dp, vertical = 2.dp),
                 )
             }
         }

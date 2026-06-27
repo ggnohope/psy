@@ -106,10 +106,10 @@ struct TransactionRowView: View {
                 Text(account).font(.system(size: 11)).foregroundStyle(psyColors.text3)
                 if isFund {
                     Text("Quỹ")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(psyColors.text3)
-                        .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(psyColors.text3.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(psyColors.blue)
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(psyColors.blueSoft, in: Capsule())
                         .padding(.top, 2)
                 }
             }
