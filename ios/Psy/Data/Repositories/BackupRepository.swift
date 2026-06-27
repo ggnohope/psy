@@ -30,13 +30,27 @@ final class BackupRepository {
         } catch { return .failure(error) }
     }
 
-    /// After login: if local is empty, restore from cloud; if no cloud backup, seed defaults.
-    func prepareLocalDataAfterLogin() async {
-        guard snapshot.isLocalEmpty() else { return }
-        if let resp = try? await api.download(), !resp.blob.isEmpty {
-            try? snapshot.importBlob(resp.blob)
-        } else {
-            seeder.seedIfEmpty(now: Int64(Date().timeIntervalSince1970 * 1000))
+    /// After login (or cold launch with an existing token): if local is empty, restore from
+    /// cloud; if the server confirms no backup (204), seed defaults.
+    ///
+    /// Returns `true` when local data is in a known-good state that is SAFE to auto-backup
+    /// later. Returns `false` when we could not reach the server to confirm (network/server
+    /// error) — the caller MUST NOT auto-backup in that case, otherwise an empty/seed local
+    /// state could overwrite a good cloud backup we simply failed to download.
+    @discardableResult
+    func prepareLocalDataAfterLogin() async -> Bool {
+        guard snapshot.isLocalEmpty() else { return true }
+        do {
+            if let resp = try await api.download(), !resp.blob.isEmpty {
+                try snapshot.importBlob(resp.blob)
+            } else {
+                // 204 / empty body → genuinely new user, safe to seed.
+                seeder.seedIfEmpty(now: Int64(Date().timeIntervalSince1970 * 1000))
+            }
+            return true
+        } catch {
+            // Could not confirm cloud state: leave local untouched and keep backups gated.
+            return false
         }
     }
 

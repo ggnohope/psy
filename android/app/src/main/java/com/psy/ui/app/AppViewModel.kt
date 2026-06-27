@@ -67,6 +67,11 @@ class AppViewModel @Inject constructor(
     private var hasResolvedInitial = false
     private var lastBackgroundedAt = 0L
     private val prepareMutex = Mutex()
+    // Auto-backup gate: the token for which restore-or-seed has SUCCEEDED. Set on the main
+    // thread, read from the IO appScope in onStop/logout, hence @Volatile. backupNow only
+    // runs when this matches the current token, so a freshly wiped/empty local state can
+    // never overwrite the cloud backup before it is restored.
+    @Volatile
     private var preparedToken: String? = null
 
     init {
@@ -156,7 +161,10 @@ class AppViewModel @Inject constructor(
     fun onStop(nowMillis: Long) {
         lastBackgroundedAt = nowMillis
         appScope.launch {
-            if (tokenStore.currentToken() == null) return@launch
+            val token = tokenStore.currentToken() ?: return@launch
+            // Never auto-backup until restore-or-seed has succeeded this session, else an
+            // empty/freshly-wiped local state would overwrite the good cloud backup.
+            if (preparedToken != token) return@launch
             val lastSync = tokenStore.lastSyncAtFlow.first() ?: 0L
             if (nowMillis - lastSync > AUTO_BACKUP_THROTTLE_MS) {
                 runCatching { backupRepository.backupNow() }
@@ -170,7 +178,10 @@ class AppViewModel @Inject constructor(
      */
     fun logout() {
         appScope.launch {
-            runCatching { backupRepository.backupNow() }
+            // Only push a final backup if local data is in a known-good (prepared) state.
+            if (preparedToken == tokenStore.currentToken()) {
+                runCatching { backupRepository.backupNow() }
+            }
             runCatching { backupRepository.wipeLocal() }
             authRepository.signOut()
         }

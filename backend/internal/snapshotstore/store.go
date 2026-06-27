@@ -9,10 +9,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Save upserts the snapshot for userID, incrementing the version on conflict.
-// Returns the new version and updatedAt timestamp.
+// historyKeep is how many past snapshot versions to retain per user. The latest lives
+// in `snapshots`; the previous historyKeep-1 are recoverable from `snapshot_history`.
+const historyKeep = 20
+
+// Save upserts the snapshot for userID, incrementing the version on conflict, and
+// appends the new version to snapshot_history (pruned to the last historyKeep) so an
+// overwrite is never destructive. Returns the new version and updatedAt timestamp.
 func Save(ctx context.Context, pool *pgxpool.Pool, userID int64, blob []byte) (version int64, updatedAt time.Time, err error) {
-	const q = `
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return 0, time.Time{}, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // no-op after Commit
+
+	const upsert = `
 		INSERT INTO snapshots(user_id, version, blob, updated_at)
 		VALUES($1, 1, $2, now())
 		ON CONFLICT(user_id) DO UPDATE
@@ -20,8 +31,32 @@ func Save(ctx context.Context, pool *pgxpool.Pool, userID int64, blob []byte) (v
 			    blob       = EXCLUDED.blob,
 			    updated_at = now()
 		RETURNING version, updated_at`
-	err = pool.QueryRow(ctx, q, userID, blob).Scan(&version, &updatedAt)
-	return
+	if err = tx.QueryRow(ctx, upsert, userID, blob).Scan(&version, &updatedAt); err != nil {
+		return 0, time.Time{}, err
+	}
+
+	const insertHistory = `INSERT INTO snapshot_history(user_id, version, blob) VALUES($1, $2, $3)`
+	if _, err = tx.Exec(ctx, insertHistory, userID, version, blob); err != nil {
+		return 0, time.Time{}, err
+	}
+
+	const prune = `
+		DELETE FROM snapshot_history
+		WHERE user_id = $1
+		  AND id NOT IN (
+		      SELECT id FROM snapshot_history
+		      WHERE user_id = $1
+		      ORDER BY version DESC
+		      LIMIT $2
+		  )`
+	if _, err = tx.Exec(ctx, prune, userID, historyKeep); err != nil {
+		return 0, time.Time{}, err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return 0, time.Time{}, err
+	}
+	return version, updatedAt, nil
 }
 
 // Get retrieves the snapshot for userID. If no snapshot exists, found is false.
