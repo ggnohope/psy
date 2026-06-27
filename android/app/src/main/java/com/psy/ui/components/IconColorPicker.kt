@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -62,23 +65,33 @@ fun IconPicker(
             placeholder = { Text("Tìm biểu tượng") },
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
         )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        // Manual 6-column grid: each tile takes 1/6 of the row width (weight) so the grid
+        // fills the full content width evenly; the last row is padded with weighted spacers
+        // so its tiles keep the same size. Wrap-content height → single editor scroll.
+        Column(
             verticalArrangement = Arrangement.spacedBy(6.dp),
-            maxItemsInEachRow = 6,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            items.forEach { name ->
-                val isSelected = name == selected
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (isSelected) colors.blueSoft else colors.sunken)
-                        .clickable { onPick(name) },
+            items.chunked(6).forEach { rowItems ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    LucideIcon(name, tint = if (isSelected) colors.blue else colors.text2, size = 22.dp)
+                    rowItems.forEach { name ->
+                        val isSelected = name == selected
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) colors.blueSoft else colors.sunken)
+                                .clickable { onPick(name) },
+                        ) {
+                            LucideIcon(name, tint = if (isSelected) colors.blue else colors.text2, size = 22.dp)
+                        }
+                    }
+                    repeat(6 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }

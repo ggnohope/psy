@@ -34,12 +34,14 @@ struct IconPicker: View {
                     let isSelected = name == selected
                     RoundedRectangle(cornerRadius: 10)
                         .fill(isSelected ? psyColors.blueSoft : psyColors.sunken)
+                        .frame(maxWidth: .infinity)
                         .aspectRatio(1, contentMode: .fit)
                         .overlay(LucideIcon(name: name, size: 22, tint: isSelected ? psyColors.blue : psyColors.text2))
                         .contentShape(Rectangle())
                         .onTapGesture { onPick(name) }
                 }
             }
+            .frame(maxWidth: .infinity)
         }
     }
 }
