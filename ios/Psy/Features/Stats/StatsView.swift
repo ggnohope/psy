@@ -160,11 +160,11 @@ struct StatsView: View {
     private var accountBreakdownLegend: some View {
         HStack(spacing: 12) {
             HStack(spacing: 4) {
-                Circle().fill(psyColors.green).frame(width: 7, height: 7)
+                RoundedRectangle(cornerRadius: 3).fill(psyColors.green).frame(width: 10, height: 10)
                 Text("Thu").font(PsyFont.mono(11)).foregroundStyle(psyColors.text3)
             }
             HStack(spacing: 4) {
-                Circle().fill(psyColors.red).frame(width: 7, height: 7)
+                RoundedRectangle(cornerRadius: 3).fill(psyColors.red).frame(width: 10, height: 10)
                 Text("Chi").font(PsyFont.mono(11)).foregroundStyle(psyColors.text3)
             }
         }
@@ -173,10 +173,10 @@ struct StatsView: View {
     private func accountBreakdownRow(_ stat: AccountStat, maxValue: Int64) -> some View {
         let tileTint = Color(argb: stat.color)
         return Button { vm.selectAccount(stat.id) } label: {
-            HStack(spacing: 13) {
+            HStack(spacing: 12) {
                 IconTile(iconName: stat.icon, tint: tileTint, bg: tileTint.opacity(0.14), size: 42)
 
-                VStack(spacing: 7) {
+                VStack(spacing: 6) {
                     HStack {
                         Text(stat.name)
                             .font(PsyFont.bodyLarge.weight(.semibold))

@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -105,7 +106,9 @@ fun ManageAccountsScreen(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp)
-                .size(56.dp).clip(RoundedCornerShape(16.dp)).background(colors.blue)
+                .size(56.dp)
+                .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = colors.blue, ambientColor = colors.blue)
+                .clip(RoundedCornerShape(16.dp)).background(colors.blue)
                 .clickable(onClick = viewModel::startAdd),
         ) { Icon(Lucide.Plus, "Thêm tài khoản", tint = Color.White, modifier = Modifier.size(26.dp)) }
     }

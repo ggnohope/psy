@@ -170,12 +170,6 @@ struct ManageCategoriesView: View {
         )
     }
 
-    /// Preview tint for the editor's IconTile. Groups use their own color;
-    /// leaves (no own color) fall back to a fixed blue accent argb.
-    private func previewColor(showColor: Bool, color: Int64) -> Int64 {
-        showColor ? color : 0xFF0A7CF6
-    }
-
     @ViewBuilder
     private func editorSheet(title: String, name: Binding<String>, icon: Binding<String>,
                              color: Binding<Int64>, showColor: Bool, canSave: Bool,
@@ -188,8 +182,8 @@ struct ManageCategoriesView: View {
 
                     HStack(spacing: 13) {
                         IconTile(iconName: icon.wrappedValue,
-                                 tint: Color(argb: previewColor(showColor: showColor, color: color.wrappedValue)),
-                                 bg: Color(argb: previewColor(showColor: showColor, color: color.wrappedValue)).opacity(0.14),
+                                 tint: showColor ? Color(argb: color.wrappedValue) : psyColors.text2,
+                                 bg: showColor ? Color(argb: color.wrappedValue).opacity(0.14) : psyColors.sunken,
                                  size: 48)
                         Text(name.wrappedValue.isEmpty ? "Tên" : name.wrappedValue)
                             .font(PsyFont.bodyLarge.weight(.semibold))
