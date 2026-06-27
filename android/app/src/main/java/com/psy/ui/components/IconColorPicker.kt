@@ -8,14 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,6 +41,7 @@ private val COLOR_PALETTE: List<Long> = listOf(
  * Searchable Lucide icon picker (replaces the old fixed-emoji grid).
  * `selected`/`onPick` are Lucide name strings (e.g. "shopping-bag").
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IconPicker(
     selected: String,
@@ -66,19 +62,18 @@ fun IconPicker(
             placeholder = { Text("Tìm biểu tượng") },
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
         )
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(6),
-            userScrollEnabled = true,
+        FlowRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.fillMaxWidth().height((6 * 52).dp),
+            maxItemsInEachRow = 6,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            items(items) { name ->
+            items.forEach { name ->
                 val isSelected = name == selected
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .aspectRatio(1f)
+                        .size(48.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(if (isSelected) colors.blueSoft else colors.sunken)
                         .clickable { onPick(name) },

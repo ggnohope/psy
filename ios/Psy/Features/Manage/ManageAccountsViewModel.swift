@@ -15,8 +15,8 @@ final class ManageAccountsViewModel {
     var editingId: Int64?
     var draftName: String = ""
     var draftType: AccountType = .cash
-    var draftIcon: String = "💵"
-    var draftColor: Int64 = 0xFF22C55E
+    var draftIcon: String = "wallet"
+    var draftColor: Int64 = 0xFF1F9D62
     var draftIsFund: Bool = false
 
     init(container: AppContainer) {
@@ -37,8 +37,8 @@ final class ManageAccountsViewModel {
         editingId = nil
         draftName = ""
         draftType = .cash
-        draftIcon = "💵"
-        draftColor = 0xFF22C55E
+        draftIcon = "wallet"
+        draftColor = 0xFF1F9D62
         draftIsFund = false
     }
 

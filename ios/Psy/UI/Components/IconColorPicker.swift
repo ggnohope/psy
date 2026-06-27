@@ -29,22 +29,17 @@ struct IconPicker: View {
         VStack(spacing: 8) {
             TextField("Tìm biểu tượng", text: $query)
                 .textFieldStyle(.roundedBorder)
-            // Fixed-height scroll area so the (now ~112-icon) grid doesn't blow up the
-            // editor's height — mirrors Android's height((6*52).dp) bounded grid.
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 6) {
-                    ForEach(items, id: \.self) { name in
-                        let isSelected = name == selected
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(isSelected ? psyColors.blueSoft : psyColors.sunken)
-                            .aspectRatio(1, contentMode: .fit)
-                            .overlay(LucideIcon(name: name, size: 22, tint: isSelected ? psyColors.blue : psyColors.text2))
-                            .contentShape(Rectangle())
-                            .onTapGesture { onPick(name) }
-                    }
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(items, id: \.self) { name in
+                    let isSelected = name == selected
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isSelected ? psyColors.blueSoft : psyColors.sunken)
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay(LucideIcon(name: name, size: 22, tint: isSelected ? psyColors.blue : psyColors.text2))
+                        .contentShape(Rectangle())
+                        .onTapGesture { onPick(name) }
                 }
             }
-            .frame(height: 312)
         }
     }
 }
