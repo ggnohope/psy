@@ -438,6 +438,23 @@ private fun GroupEditor(
             color = colors.text,
         )
 
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp),
+        ) {
+            IconTile(
+                iconName = state.groupDraftIcon,
+                tint = Color(state.groupDraftColor),
+                bg = Color(state.groupDraftColor).copy(alpha = 0.14f),
+                size = 48.dp,
+            )
+            Text(
+                if (state.groupDraftName.isBlank()) "Tên" else state.groupDraftName,
+                color = if (state.groupDraftName.isBlank()) colors.text3 else colors.text,
+                fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
+            )
+        }
+
         PsyTextField(
             value = state.groupDraftName,
             onValueChange = onNameChange,
@@ -507,6 +524,23 @@ private fun LeafEditor(
             style = PsyTypography.titleLarge,
             color = colors.text,
         )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp),
+        ) {
+            IconTile(
+                iconName = state.leafDraftIcon,
+                tint = colors.text2,
+                bg = colors.sunken,
+                size = 48.dp,
+            )
+            Text(
+                if (state.leafDraftName.isBlank()) "Tên" else state.leafDraftName,
+                color = if (state.leafDraftName.isBlank()) colors.text3 else colors.text,
+                fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
+            )
+        }
 
         PsyTextField(
             value = state.leafDraftName,

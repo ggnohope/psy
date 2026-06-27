@@ -130,13 +130,33 @@ struct ManageCategoriesView: View {
         )
     }
 
+    /// Preview tint for the editor's IconTile. Groups use their own color;
+    /// leaves (no own color) fall back to a fixed blue accent argb.
+    private func previewColor(showColor: Bool, color: Int64) -> Int64 {
+        showColor ? color : 0xFF0A7CF6
+    }
+
     @ViewBuilder
     private func editorSheet(title: String, name: Binding<String>, icon: Binding<String>,
                              color: Binding<Int64>, showColor: Bool, canSave: Bool,
                              onSave: @escaping () -> Void, onCancel: @escaping () -> Void) -> some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                    Text(title)
+                        .font(PsyFont.titleLarge)
+                        .foregroundStyle(psyColors.text)
+
+                    HStack(spacing: 13) {
+                        IconTile(iconName: icon.wrappedValue,
+                                 tint: Color(argb: previewColor(showColor: showColor, color: color.wrappedValue)),
+                                 bg: Color(argb: previewColor(showColor: showColor, color: color.wrappedValue)).opacity(0.14),
+                                 size: 48)
+                        Text(name.wrappedValue.isEmpty ? "Tên" : name.wrappedValue)
+                            .font(PsyFont.bodyLarge.weight(.semibold))
+                            .foregroundStyle(name.wrappedValue.isEmpty ? psyColors.text3 : psyColors.text)
+                        Spacer()
+                    }
+
                     EyebrowLabel(text: "Tên")
                     PsyTextField("Tên", text: name)
                     EyebrowLabel(text: "Biểu tượng")
@@ -169,12 +189,9 @@ struct ManageCategoriesView: View {
                         .disabled(!canSave)
                     }
                     .padding(.top, 4)
-                }
-                .padding(16)
             }
-            .background(psyColors.bg)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
+            .padding(16)
         }
+        .background(psyColors.bg)
     }
 }

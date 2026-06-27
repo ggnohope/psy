@@ -105,9 +105,21 @@ private struct AccountEditorSheet: View {
     let onDone: () -> Void
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                    Text(vm.editingId == nil ? "Thêm tài khoản" : "Sửa tài khoản")
+                        .font(PsyFont.titleLarge)
+                        .foregroundStyle(psyColors.text)
+
+                    HStack(spacing: 13) {
+                        IconTile(iconName: vm.draftIcon, tint: Color(argb: vm.draftColor),
+                                 bg: Color(argb: vm.draftColor).opacity(0.14), size: 48)
+                        Text(vm.draftName.isEmpty ? "Tên" : vm.draftName)
+                            .font(PsyFont.bodyLarge.weight(.semibold))
+                            .foregroundStyle(vm.draftName.isEmpty ? psyColors.text3 : psyColors.text)
+                        Spacer()
+                    }
+
                     VStack(alignment: .leading, spacing: 8) {
                         EyebrowLabel(text: "Tên tài khoản")
                         PsyTextField("Tên tài khoản", text: $vm.draftName)
@@ -169,13 +181,10 @@ private struct AccountEditorSheet: View {
                         .disabled(saveDisabled)
                     }
                     .padding(.top, 4)
-                }
-                .padding(22)
             }
-            .background(psyColors.bg.ignoresSafeArea())
-            .navigationTitle(vm.editingId == nil ? "Thêm tài khoản" : "Sửa tài khoản")
-            .navigationBarTitleDisplayMode(.inline)
+            .padding(22)
         }
+        .background(psyColors.bg.ignoresSafeArea())
     }
 
     private var saveDisabled: Bool {

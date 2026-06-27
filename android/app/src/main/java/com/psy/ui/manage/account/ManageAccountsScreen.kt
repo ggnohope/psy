@@ -57,6 +57,7 @@ import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.components.IconTile
 import com.psy.ui.theme.LocalPsyColors
 import com.psy.ui.theme.PlexMono
+import com.psy.ui.theme.PsyTypography
 import com.psy.ui.theme.SpaceGrotesk
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -191,8 +192,25 @@ private fun AccountEditor(
     ) {
         Text(
             text = if (state.editingId == null) "Thêm tài khoản" else "Sửa tài khoản",
-            fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = colors.text,
+            style = PsyTypography.titleLarge,
+            color = colors.text,
         )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp),
+        ) {
+            IconTile(
+                iconName = state.draftIcon,
+                tint = Color(state.draftColor),
+                bg = Color(state.draftColor).copy(alpha = 0.14f),
+                size = 48.dp,
+            )
+            Text(
+                if (state.draftName.isBlank()) "Tên" else state.draftName,
+                color = if (state.draftName.isBlank()) colors.text3 else colors.text,
+                fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
+            )
+        }
         PsyTextField(
             value = state.draftName,
             onValueChange = onNameChange,
