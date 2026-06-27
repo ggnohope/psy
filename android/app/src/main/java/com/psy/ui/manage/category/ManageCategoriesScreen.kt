@@ -1,5 +1,6 @@
 package com.psy.ui.manage.category
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,11 +21,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -33,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,6 +53,7 @@ import com.psy.ui.components.ColorPicker
 import com.psy.ui.components.EmptyState
 import com.psy.ui.components.IconPicker
 import com.psy.ui.components.IconTile
+import com.psy.ui.components.PsyTextField
 import com.psy.ui.components.SegmentedControl
 import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.icons.LucideIcon
@@ -155,11 +159,12 @@ fun ManageCategoriesScreen(
                 .align(Alignment.BottomEnd)
                 .padding(22.dp)
                 .size(56.dp)
+                .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = colors.blue, ambientColor = colors.blue)
                 .clip(RoundedCornerShape(16.dp))
                 .background(colors.blue)
                 .clickable(onClick = viewModel::startAddGroup),
         ) {
-            Icon(Lucide.Plus, contentDescription = "Thêm nhóm", tint = Color.White)
+            Icon(Lucide.Plus, contentDescription = "Thêm nhóm", tint = Color.White, modifier = Modifier.size(26.dp))
         }
     }
 
@@ -304,7 +309,7 @@ private fun GroupCard(
                 fontWeight = FontWeight.SemiBold,
                 color = colors.text,
             )
-            IconButton(onClick = onEditGroup, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onEditGroup, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Lucide.Pencil,
                     contentDescription = "Sửa nhóm",
@@ -312,7 +317,7 @@ private fun GroupCard(
                     modifier = Modifier.size(18.dp),
                 )
             }
-            IconButton(onClick = onDeleteGroup, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onDeleteGroup, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Lucide.Trash2,
                     contentDescription = "Xoá nhóm",
@@ -391,20 +396,20 @@ private fun LeafRow(
             style = PsyTypography.bodyMedium,
             color = colors.text,
         )
-        IconButton(onClick = onEdit, modifier = Modifier.size(34.dp)) {
+        IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
             Icon(
                 Lucide.Pencil,
                 contentDescription = "Sửa mục",
                 tint = colors.text3,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
-        IconButton(onClick = onDelete, modifier = Modifier.size(34.dp)) {
+        IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
             Icon(
                 Lucide.Trash2,
                 contentDescription = "Xoá mục",
                 tint = colors.red,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -435,12 +440,27 @@ private fun GroupEditor(
             color = colors.text,
         )
 
-        OutlinedTextField(
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp),
+        ) {
+            IconTile(
+                iconName = state.groupDraftIcon,
+                tint = Color(state.groupDraftColor),
+                bg = Color(state.groupDraftColor).copy(alpha = 0.14f),
+                size = 48.dp,
+            )
+            Text(
+                if (state.groupDraftName.isBlank()) "Tên" else state.groupDraftName,
+                color = if (state.groupDraftName.isBlank()) colors.text3 else colors.text,
+                fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
+            )
+        }
+
+        PsyTextField(
             value = state.groupDraftName,
             onValueChange = onNameChange,
-            label = { Text("Tên nhóm") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            label = "Tên nhóm",
         )
 
         Text(text = "Biểu tượng", style = PsyTypography.labelLarge, color = colors.text2)
@@ -461,12 +481,20 @@ private fun GroupEditor(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+            OutlinedButton(
+                onClick = onCancel,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, colors.hair),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.text2),
+                modifier = Modifier.weight(1f),
+            ) {
                 Text("Huỷ")
             }
             Button(
                 onClick = onSave,
                 enabled = state.groupDraftName.isNotBlank(),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.blue),
                 modifier = Modifier.weight(1f),
             ) {
                 Text("Lưu")
@@ -499,12 +527,27 @@ private fun LeafEditor(
             color = colors.text,
         )
 
-        OutlinedTextField(
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp),
+        ) {
+            IconTile(
+                iconName = state.leafDraftIcon,
+                tint = colors.text2,
+                bg = colors.sunken,
+                size = 48.dp,
+            )
+            Text(
+                if (state.leafDraftName.isBlank()) "Tên" else state.leafDraftName,
+                color = if (state.leafDraftName.isBlank()) colors.text3 else colors.text,
+                fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
+            )
+        }
+
+        PsyTextField(
             value = state.leafDraftName,
             onValueChange = onNameChange,
-            label = { Text("Tên mục") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            label = "Tên mục",
         )
 
         Text(text = "Biểu tượng", style = PsyTypography.labelLarge, color = colors.text2)
@@ -519,12 +562,20 @@ private fun LeafEditor(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+            OutlinedButton(
+                onClick = onCancel,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, colors.hair),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.text2),
+                modifier = Modifier.weight(1f),
+            ) {
                 Text("Huỷ")
             }
             Button(
                 onClick = onSave,
                 enabled = state.leafDraftName.isNotBlank(),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.blue),
                 modifier = Modifier.weight(1f),
             ) {
                 Text("Lưu")

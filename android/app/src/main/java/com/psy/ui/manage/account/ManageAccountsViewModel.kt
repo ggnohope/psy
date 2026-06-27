@@ -21,8 +21,8 @@ data class ManageAccountsUiState(
     val editingId: Long? = null,
     val draftName: String = "",
     val draftType: AccountType = AccountType.CASH,
-    val draftIcon: String = "💵",
-    val draftColor: Long = 0xFF22C55E,
+    val draftIcon: String = "wallet",
+    val draftColor: Long = 0xFF1F9D62,
     val draftIsFund: Boolean = false,
 )
 
@@ -35,8 +35,8 @@ class ManageAccountsViewModel @Inject constructor(
     private val _editingId = MutableStateFlow<Long?>(null)
     private val _draftName = MutableStateFlow("")
     private val _draftType = MutableStateFlow(AccountType.CASH)
-    private val _draftIcon = MutableStateFlow("💵")
-    private val _draftColor = MutableStateFlow<Long>(0xFF22C55EL)
+    private val _draftIcon = MutableStateFlow("wallet")
+    private val _draftColor = MutableStateFlow<Long>(0xFF1F9D62L)
     private val _draftIsFund = MutableStateFlow(false)
 
     private val _accounts = repo.observeAll()
@@ -82,8 +82,8 @@ class ManageAccountsViewModel @Inject constructor(
         _editingId.value = null
         _draftName.value = ""
         _draftType.value = AccountType.CASH
-        _draftIcon.value = "💵"
-        _draftColor.value = 0xFF22C55EL
+        _draftIcon.value = "wallet"
+        _draftColor.value = 0xFF1F9D62L
         _draftIsFund.value = false
         _editorOpen.value = true
     }

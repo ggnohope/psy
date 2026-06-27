@@ -7,6 +7,8 @@ import PsyCore
 struct ManageCategoriesView: View {
     @Environment(\.psyColors) private var psyColors
     @State private var vm: ManageCategoriesViewModel
+    @State private var pendingDeleteGroup: CategoryGroup?
+    @State private var pendingDeleteLeaf: PsyCore.Category?
 
     init(container: AppContainer) {
         _vm = State(initialValue: ManageCategoriesViewModel(container: container))
@@ -50,6 +52,39 @@ struct ManageCategoriesView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $vm.groupEditorOpen) { groupEditorSheet }
         .sheet(isPresented: $vm.leafEditorOpen) { leafEditorSheet }
+        // Confirm group deletion — mirrors Android's cascade-warning AlertDialog.
+        .confirmationDialog(
+            "Xoá nhóm",
+            isPresented: Binding(get: { pendingDeleteGroup != nil },
+                                 set: { if !$0 { pendingDeleteGroup = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingDeleteGroup
+        ) { group in
+            Button("Xoá", role: .destructive) {
+                vm.deleteGroup(group)
+                pendingDeleteGroup = nil
+            }
+            Button("Huỷ", role: .cancel) { pendingDeleteGroup = nil }
+        } message: { group in
+            Text("Xoá nhóm «\(group.name)» và tất cả mục con của nó? "
+                + "Các giao dịch cũ thuộc nhóm này sẽ mất danh mục.")
+        }
+        // Confirm leaf deletion.
+        .confirmationDialog(
+            "Xoá mục",
+            isPresented: Binding(get: { pendingDeleteLeaf != nil },
+                                 set: { if !$0 { pendingDeleteLeaf = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingDeleteLeaf
+        ) { leaf in
+            Button("Xoá", role: .destructive) {
+                vm.deleteLeaf(leaf)
+                pendingDeleteLeaf = nil
+            }
+            Button("Huỷ", role: .cancel) { pendingDeleteLeaf = nil }
+        } message: { leaf in
+            Text("Xoá mục «\(leaf.name)»?")
+        }
     }
 
     // MARK: - Group card
@@ -63,7 +98,7 @@ struct ManageCategoriesView: View {
                 Text(g.name).font(PsyFont.bodyLarge.weight(.semibold)).foregroundStyle(psyColors.text)
                 Spacer()
                 iconButton("pencil", tint: psyColors.text3) { vm.startEditGroup(g) }
-                iconButton("trash-2", tint: psyColors.red) { vm.deleteGroup(g) }
+                iconButton("trash-2", tint: psyColors.red) { pendingDeleteGroup = g }
             }
             .padding(14)
 
@@ -76,7 +111,7 @@ struct ManageCategoriesView: View {
                     Text(leaf.name).font(PsyFont.bodyMedium).foregroundStyle(psyColors.text)
                     Spacer()
                     iconButton("pencil", tint: psyColors.text3) { vm.startEditLeaf(leaf) }
-                    iconButton("trash-2", tint: psyColors.red) { vm.deleteLeaf(leaf) }
+                    iconButton("trash-2", tint: psyColors.red) { pendingDeleteLeaf = leaf }
                 }
                 .padding(.horizontal, 14).padding(.vertical, 10)
             }
@@ -98,8 +133,13 @@ struct ManageCategoriesView: View {
     }
 
     private func iconButton(_ name: String, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) { LucideIcon(name: name, size: 18, tint: tint).frame(width: 32, height: 32) }
-            .buttonStyle(.plain)
+        // Icon visual stays 18; the tappable frame is 44×44 to meet the a11y minimum.
+        Button(action: action) {
+            LucideIcon(name: name, size: 18, tint: tint)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Editors
@@ -134,10 +174,25 @@ struct ManageCategoriesView: View {
     private func editorSheet(title: String, name: Binding<String>, icon: Binding<String>,
                              color: Binding<Int64>, showColor: Bool, canSave: Bool,
                              onSave: @escaping () -> Void, onCancel: @escaping () -> Void) -> some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    TextField("Tên", text: name).textFieldStyle(.roundedBorder)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                    Text(title)
+                        .font(PsyFont.titleLarge)
+                        .foregroundStyle(psyColors.text)
+
+                    HStack(spacing: 13) {
+                        IconTile(iconName: icon.wrappedValue,
+                                 tint: showColor ? Color(argb: color.wrappedValue) : psyColors.text2,
+                                 bg: showColor ? Color(argb: color.wrappedValue).opacity(0.14) : psyColors.sunken,
+                                 size: 48)
+                        Text(name.wrappedValue.isEmpty ? "Tên" : name.wrappedValue)
+                            .font(PsyFont.bodyLarge.weight(.semibold))
+                            .foregroundStyle(name.wrappedValue.isEmpty ? psyColors.text3 : psyColors.text)
+                        Spacer()
+                    }
+
+                    EyebrowLabel(text: "Tên")
+                    PsyTextField("Tên", text: name)
                     EyebrowLabel(text: "Biểu tượng")
                     IconPicker(selected: icon.wrappedValue) { icon.wrappedValue = $0 }
                     if showColor {
@@ -153,8 +208,8 @@ struct ManageCategoriesView: View {
                                 .padding(.vertical, 13)
                                 .foregroundStyle(psyColors.text2)
                                 .background(psyColors.surface)
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(psyColors.hair, lineWidth: 1))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: PsyRadius.button).stroke(psyColors.hair, lineWidth: 1))
+                                .clipShape(RoundedRectangle(cornerRadius: PsyRadius.button))
                         }
                         Button { onSave() } label: {
                             Text("Lưu")
@@ -162,18 +217,15 @@ struct ManageCategoriesView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 13)
                                 .foregroundStyle(.white)
-                                .background(canSave ? psyColors.blue : psyColors.text3)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .background(psyColors.blue.opacity(canSave ? 1 : 0.4))
+                                .clipShape(RoundedRectangle(cornerRadius: PsyRadius.button))
                         }
                         .disabled(!canSave)
                     }
                     .padding(.top, 4)
-                }
-                .padding(16)
             }
-            .background(psyColors.bg)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
+            .padding(22)
         }
+        .background(psyColors.bg)
     }
 }

@@ -136,7 +136,11 @@ struct StatsView: View {
 
     private var accountBreakdownSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            EyebrowLabel(text: "Theo tài khoản")
+            HStack {
+                EyebrowLabel(text: "Theo tài khoản")
+                Spacer()
+                accountBreakdownLegend
+            }
 
             if vm.accountBreakdown.isEmpty {
                 Text("Kỳ này chưa có giao dịch theo tài khoản")
@@ -152,14 +156,27 @@ struct StatsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// Thu / Chi swatch legend, mirrors Android's header legend.
+    private var accountBreakdownLegend: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 4) {
+                RoundedRectangle(cornerRadius: 3).fill(psyColors.green).frame(width: 10, height: 10)
+                Text("Thu").font(PsyFont.mono(11)).foregroundStyle(psyColors.text3)
+            }
+            HStack(spacing: 4) {
+                RoundedRectangle(cornerRadius: 3).fill(psyColors.red).frame(width: 10, height: 10)
+                Text("Chi").font(PsyFont.mono(11)).foregroundStyle(psyColors.text3)
+            }
+        }
+    }
+
     private func accountBreakdownRow(_ stat: AccountStat, maxValue: Int64) -> some View {
-        let isCash = vm.accounts.first { $0.id == stat.id }?.type == .cash
-        let tileTint = isCash ? psyColors.green : psyColors.blue
+        let tileTint = Color(argb: stat.color)
         return Button { vm.selectAccount(stat.id) } label: {
-            HStack(spacing: 13) {
+            HStack(spacing: 12) {
                 IconTile(iconName: stat.icon, tint: tileTint, bg: tileTint.opacity(0.14), size: 42)
 
-                VStack(spacing: 7) {
+                VStack(spacing: 6) {
                     HStack {
                         Text(stat.name)
                             .font(PsyFont.bodyLarge.weight(.semibold))
@@ -168,10 +185,10 @@ struct StatsView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         if stat.isFund {
                             Text("Quỹ")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(psyColors.text3)
-                                .padding(.horizontal, 6).padding(.vertical, 1)
-                                .background(psyColors.text3.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(psyColors.blue)
+                                .padding(.horizontal, 7).padding(.vertical, 2)
+                                .background(psyColors.blueSoft, in: Capsule())
                         }
                         Text(vm.currency.format(stat.netMinor))
                             .font(PsyFont.display(15))

@@ -294,7 +294,7 @@ private fun AccountBreakdownSection(
         .maxOf { maxOf(it.incomeMinor, it.expenseMinor) }
         .coerceAtLeast(1L)
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -311,12 +311,11 @@ private fun AccountBreakdownSection(
                 Text("Chi", fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
             }
         }
-        state.accountBreakdown.forEachIndexed { index, stat ->
+        state.accountBreakdown.forEach { stat ->
             AccountBreakdownRow(
                 stat = stat,
                 maxValue = maxValue,
                 currency = state.currency,
-                iconTint = if (index % 2 == 0) colors.blue else colors.green,
                 onClick = { onSelect(stat.id) },
             )
         }
@@ -328,10 +327,10 @@ private fun AccountBreakdownRow(
     stat: AccountStat,
     maxValue: Long,
     currency: Currency,
-    iconTint: Color,
     onClick: () -> Unit,
 ) {
     val colors = LocalPsyColors.current
+    val iconTint = Color(stat.color)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -341,7 +340,7 @@ private fun AccountBreakdownRow(
             .clickable(onClick = onClick)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(13.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         IconTile(
             iconName = stat.icon,
@@ -358,7 +357,7 @@ private fun AccountBreakdownRow(
                 Text(
                     text = stat.name,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
+                    fontSize = 16.sp,
                     color = colors.text,
                     maxLines = 1,
                     modifier = Modifier.weight(1f),
@@ -366,13 +365,13 @@ private fun AccountBreakdownRow(
                 if (stat.isFund) {
                     Text(
                         "Quỹ",
-                        color = colors.text3,
-                        fontSize = 10.sp,
+                        color = colors.blue,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(colors.text3.copy(alpha = 0.12f))
-                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                            .clip(RoundedCornerShape(percent = 50))
+                            .background(colors.blueSoft)
+                            .padding(horizontal = 7.dp, vertical = 2.dp),
                     )
                 }
                 Text(

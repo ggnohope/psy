@@ -63,7 +63,7 @@ fun TransactionRow(
     val colors = LocalPsyColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(13.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
@@ -74,7 +74,7 @@ fun TransactionRow(
     ) {
         IconTile(iconName, iconTint, iconBg, size = 44.dp)
         Column(Modifier.weight(1f)) {
-            Text(name, color = colors.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            Text(name, color = colors.text, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             Text(meta, color = colors.text3, fontSize = 12.sp)
         }
         Column(horizontalAlignment = Alignment.End) {
@@ -89,14 +89,14 @@ fun TransactionRow(
             if (isFund) {
                 Text(
                     "Quỹ",
-                    color = colors.text3,
-                    fontSize = 10.sp,
+                    color = colors.blue,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .padding(top = 2.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(colors.text3.copy(alpha = 0.12f))
-                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(colors.blueSoft)
+                        .padding(horizontal = 7.dp, vertical = 2.dp),
                 )
             }
         }

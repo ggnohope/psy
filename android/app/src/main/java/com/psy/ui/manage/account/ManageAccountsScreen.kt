@@ -1,5 +1,6 @@
 package com.psy.ui.manage.account
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,6 +9,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,24 +20,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,10 +53,12 @@ import com.psy.domain.model.AccountType
 import com.psy.ui.components.ColorPicker
 import com.psy.ui.components.EmptyState
 import com.psy.ui.components.IconPicker
+import com.psy.ui.components.PsyTextField
 import com.psy.ui.components.clearFocusOnTap
 import com.psy.ui.components.IconTile
 import com.psy.ui.theme.LocalPsyColors
 import com.psy.ui.theme.PlexMono
+import com.psy.ui.theme.PsyTypography
 import com.psy.ui.theme.SpaceGrotesk
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,7 +92,7 @@ fun ManageAccountsScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 4.dp, bottom = 96.dp),
                 ) {
                     items(state.accounts, key = { it.id }) { account ->
@@ -101,7 +106,9 @@ fun ManageAccountsScreen(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp)
-                .size(56.dp).clip(RoundedCornerShape(16.dp)).background(colors.blue)
+                .size(56.dp)
+                .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = colors.blue, ambientColor = colors.blue)
+                .clip(RoundedCornerShape(16.dp)).background(colors.blue)
                 .clickable(onClick = viewModel::startAdd),
         ) { Icon(Lucide.Plus, "Thêm tài khoản", tint = Color.White, modifier = Modifier.size(26.dp)) }
     }
@@ -129,13 +136,6 @@ private fun AccountType.toVietnamese(): String = when (this) {
     AccountType.ASSET -> "Tài sản"
 }
 
-private fun AccountType.code(): String = when (this) {
-    AccountType.CASH -> "CASH"
-    AccountType.BANK -> "BANK"
-    AccountType.CREDIT -> "CREDIT"
-    AccountType.ASSET -> "ASSET"
-}
-
 @Composable
 private fun AccountRow(
     account: Account,
@@ -161,14 +161,14 @@ private fun AccountRow(
             size = 48.dp,
         )
         Column(Modifier.weight(1f)) {
-            Text(account.name, color = colors.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            Text(account.type.code(), fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
+            Text(account.name, color = colors.text, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text(account.type.toVietnamese(), fontFamily = PlexMono, fontSize = 11.sp, color = colors.text3)
         }
         Icon(Lucide.ChevronRight, null, tint = colors.text3, modifier = Modifier.size(20.dp))
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun AccountEditor(
     state: ManageAccountsUiState,
@@ -183,25 +183,46 @@ private fun AccountEditor(
     val colors = LocalPsyColors.current
     Column(
         modifier = Modifier.fillMaxWidth().clearFocusOnTap().verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp).padding(bottom = 32.dp),
+            .padding(horizontal = 22.dp).padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
             text = if (state.editingId == null) "Thêm tài khoản" else "Sửa tài khoản",
-            fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = colors.text,
+            style = PsyTypography.titleLarge,
+            color = colors.text,
         )
-        OutlinedTextField(
-            value = state.draftName, onValueChange = onNameChange,
-            label = { Text("Tên tài khoản") }, singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp),
+        ) {
+            IconTile(
+                iconName = state.draftIcon,
+                tint = Color(state.draftColor),
+                bg = Color(state.draftColor).copy(alpha = 0.14f),
+                size = 48.dp,
+            )
+            Text(
+                if (state.draftName.isBlank()) "Tên" else state.draftName,
+                color = if (state.draftName.isBlank()) colors.text3 else colors.text,
+                fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
+            )
+        }
+        PsyTextField(
+            value = state.draftName,
+            onValueChange = onNameChange,
+            label = "Tên tài khoản",
         )
         Text(text = "Loại tài khoản", style = MaterialTheme.typography.labelLarge, color = colors.text2)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             AccountType.entries.forEach { type ->
-                FilterChip(
+                TypeChip(
+                    type = type,
                     selected = state.draftType == type,
                     onClick = { onTypeChange(type) },
-                    label = { Text(type.toVietnamese()) },
                 )
             }
         }
@@ -225,13 +246,40 @@ private fun AccountEditor(
         ColorPicker(selected = state.draftColor, onPick = onColorChange)
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Huỷ") }
+            OutlinedButton(
+                onClick = onCancel,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, colors.hair),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.text2),
+                modifier = Modifier.weight(1f),
+            ) { Text("Huỷ") }
             Button(
                 onClick = onSave,
                 enabled = state.draftName.isNotBlank(),
+                shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = colors.blue),
                 modifier = Modifier.weight(1f),
             ) { Text("Lưu") }
         }
     }
+}
+
+@Composable
+private fun TypeChip(
+    type: AccountType,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = LocalPsyColors.current
+    Text(
+        text = type.toVietnamese(),
+        color = if (selected) Color.White else colors.text2,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        fontSize = 14.sp,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(if (selected) colors.blue else colors.sunken)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+    )
 }

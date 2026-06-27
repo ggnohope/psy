@@ -29,28 +29,26 @@ struct IconPicker: View {
         VStack(spacing: 8) {
             TextField("Tìm biểu tượng", text: $query)
                 .textFieldStyle(.roundedBorder)
-            // Fixed-height scroll area so the (now ~112-icon) grid doesn't blow up the
-            // editor's height — mirrors Android's height((6*52).dp) bounded grid.
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 6) {
-                    ForEach(items, id: \.self) { name in
-                        let isSelected = name == selected
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(isSelected ? psyColors.blueSoft : psyColors.sunken)
-                            .aspectRatio(1, contentMode: .fit)
-                            .overlay(LucideIcon(name: name, size: 22, tint: isSelected ? psyColors.blue : psyColors.text2))
-                            .contentShape(Rectangle())
-                            .onTapGesture { onPick(name) }
-                    }
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(items, id: \.self) { name in
+                    let isSelected = name == selected
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isSelected ? psyColors.blueSoft : psyColors.sunken)
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay(LucideIcon(name: name, size: 22, tint: isSelected ? psyColors.blue : psyColors.text2))
+                        .contentShape(Rectangle())
+                        .onTapGesture { onPick(name) }
                 }
             }
-            .frame(height: 312)
+            .frame(maxWidth: .infinity)
         }
     }
 }
 
 /// Wrapping row of color swatches; selected swatch highlighted with a white ring + check.
 struct ColorPicker: View {
+    @Environment(\.psyColors) private var psyColors
     let selected: Int64
     let onPick: (Int64) -> Void
 
@@ -62,8 +60,13 @@ struct ColorPicker: View {
                     Circle()
                         .fill(Color(argb: value))
                         .frame(width: 36, height: 36)
+                        // Selected: 3pt white ring. Unselected: 1pt hairline so dark
+                        // palette colors stay visible against the dark surface.
                         .overlay(
-                            Circle().stroke(Color.white, lineWidth: isSelected ? 3 : 0)
+                            Circle().stroke(
+                                isSelected ? Color.white : psyColors.hair,
+                                lineWidth: isSelected ? 3 : 1
+                            )
                         )
                     if isSelected {
                         Image(systemName: "checkmark")
@@ -71,6 +74,8 @@ struct ColorPicker: View {
                             .foregroundStyle(.white)
                     }
                 }
+                // 44pt tappable area (a11y), 36pt visual unchanged.
+                .frame(width: 44, height: 44)
                 .contentShape(Circle())
                 .onTapGesture { onPick(value) }
             }
